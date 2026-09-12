@@ -5,6 +5,7 @@ import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
 import { Bullet } from '../entities/Bullet';
 import { EnemyFactory } from '../managers/EnemyFactory';
+import { StageManager } from '../managers/StageManager';
 
 export class ShootingScene extends Phaser.Scene {
   private player!: Player;
@@ -12,6 +13,7 @@ export class ShootingScene extends Phaser.Scene {
   private enemies!: Phaser.Physics.Arcade.Group;
   private enemyBullets!: Phaser.Physics.Arcade.Group;
   private boss?: Boss;
+  private stageManager = new StageManager();
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -20,6 +22,7 @@ export class ShootingScene extends Phaser.Scene {
   private stageTime = 0;
   private spawnTimer = 0;
   private bossShotTimer = 0;
+  private fireTimer = 0;
   private backgroundOffset = 0;
   private backgroundGrid?: Phaser.GameObjects.Graphics;
 
@@ -54,16 +57,17 @@ export class ShootingScene extends Phaser.Scene {
     this.stageTime += delta;
     this.spawnTimer += delta;
     this.bossShotTimer += delta;
+    this.fireTimer -= delta;
 
     this.player.move(this.cursors, this.keys);
     this.firePlayerBullet();
     this.updateEnemies();
     this.updateHud();
 
-    if (this.stageTime >= GAME_CONFIG.STAGE_DURATION && (!this.boss || !this.boss.active)) {
+    if (this.stageTime >= this.stageManager.current.duration && (!this.boss || !this.boss.active)) {
       this.spawnBoss();
     }
-    if (this.boss && this.boss.active && this.bossShotTimer > 900) {
+    if (this.boss && this.boss.active && this.bossShotTimer > this.stageManager.current.boss.bulletInterval) {
       this.fireBossPattern();
     }
   }
@@ -104,8 +108,10 @@ export class ShootingScene extends Phaser.Scene {
 
   private startGame(): void {
     this.mode = 'playing';
+    this.stageManager.reset();
     this.stageTime = 0;
     this.spawnTimer = 0;
+    this.fireTimer = 0;
 
     if (this.boss?.active) this.boss.destroy();
     this.boss = undefined;
@@ -129,8 +135,23 @@ export class ShootingScene extends Phaser.Scene {
     this.updateHud();
   }
 
+  private startNextStage(): void {
+    const clearedNumber = this.stageManager.stageNumber - 1;
+    this.stageTime = 0;
+    this.spawnTimer = 0;
+    this.bossShotTimer = 0;
+    this.boss = undefined;
+    this.enemies.clear(true, true);
+    this.enemyBullets.clear(true, true);
+
+    this.banner.setText(`STAGE ${clearedNumber} CLEAR`).setVisible(true);
+    this.time.delayedCall(1300, () => this.banner.setVisible(false));
+  }
+
   private firePlayerBullet(): void {
-    if (!Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) return;
+    if (!this.keys.SPACE.isDown || this.fireTimer > 0) return;
+    this.fireTimer = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
+
     const bx = this.player.x + 20;
     const by = this.player.y;
 
@@ -143,10 +164,12 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private updateEnemies(): void {
-    if (this.spawnTimer > 900 && this.stageTime < GAME_CONFIG.STAGE_DURATION) {
+    const stage = this.stageManager.current;
+    if (this.spawnTimer > stage.spawnInterval && this.stageTime < stage.duration) {
       this.spawnTimer = 0;
       const spawnY = Phaser.Math.Between(70, GAME_CONFIG.HEIGHT - 70);
-      EnemyFactory.create(this, this.enemies, GAME_CONFIG.WIDTH + 30, spawnY, 'basic');
+      const enemyType = this.stageManager.pickEnemyType();
+      EnemyFactory.create(this, this.enemies, GAME_CONFIG.WIDTH + 30, spawnY, enemyType, stage.speedMultiplier);
     }
 
     this.bullets.children.each((child: Phaser.GameObjects.GameObject) => {
@@ -176,7 +199,7 @@ export class ShootingScene extends Phaser.Scene {
 
   private spawnBoss(): void {
     this.boss = new Boss(this, GAME_CONFIG.WIDTH - 100, GAME_CONFIG.HEIGHT / 2);
-    this.boss.spawn(GAME_CONFIG.WIDTH - 100, GAME_CONFIG.HEIGHT / 2, 40);
+    this.boss.spawn(GAME_CONFIG.WIDTH - 100, GAME_CONFIG.HEIGHT / 2, this.stageManager.current.boss.hp);
 
     this.banner.setText('BOSS INCOMING').setVisible(true);
     this.time.delayedCall(1300, () => this.banner.setVisible(false));
@@ -197,7 +220,8 @@ export class ShootingScene extends Phaser.Scene {
       bullet = new Bullet(this, bx, by, 'enemyBullet');
       this.enemyBullets.add(bullet);
     }
-    bullet.fire(bx, by, Math.cos(angle) * 230, Math.sin(angle) * 230);
+    const bulletSpeed = this.stageManager.current.boss.bulletSpeed;
+    bullet.fire(bx, by, Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed);
   }
 
   private hitEnemy(object1: any, object2: any): void {
@@ -218,7 +242,11 @@ export class ShootingScene extends Phaser.Scene {
     bullet.disableBody(true, true);
     const defeated = this.boss.takeDamage(1);
     if (defeated) {
-      this.finish('clear');
+      if (this.stageManager.advance()) {
+        this.startNextStage();
+      } else {
+        this.finish('clear');
+      }
     }
   }
 
@@ -243,7 +271,7 @@ export class ShootingScene extends Phaser.Scene {
     if (this.player?.active) this.player.setVelocity(0, 0);
     this.bullets.setVelocityX(0);
     this.enemyBullets.setVelocity(0, 0);
-    this.banner.setText(mode === 'clear' ? 'STAGE CLEAR!' : 'GAME OVER').setVisible(true);
+    this.banner.setText(mode === 'clear' ? 'ALL STAGE CLEAR!' : 'GAME OVER').setVisible(true);
     this.instruction.setText('ENTER：もう一度プレイ').setVisible(true);
   }
 
@@ -252,9 +280,10 @@ export class ShootingScene extends Phaser.Scene {
     this.hpText.setText(`HP  ${'●'.repeat(hp)}${'○'.repeat(GAME_CONFIG.PLAYER_HP - hp)}`);
 
     if (this.boss && this.boss.active) {
-      this.progressText.setText(`BOSS  ${this.boss.hp} / 40`);
+      this.progressText.setText(`BOSS  ${this.boss.hp} / ${this.stageManager.current.boss.hp}`);
     } else {
-      this.progressText.setText(`STAGE  ${Math.min(100, Math.floor(this.stageTime / GAME_CONFIG.STAGE_DURATION * 100))}%`);
+      const pct = Math.min(100, Math.floor(this.stageTime / this.stageManager.current.duration * 100));
+      this.progressText.setText(`STAGE ${this.stageManager.stageNumber}/${this.stageManager.totalStages}  ${pct}%`);
     }
   }
 
