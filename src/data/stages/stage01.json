@@ -1,0 +1,13 @@
+{
+  "id": "stage01",
+  "name": "ステージ1",
+  "duration": 25000,
+  "spawnInterval": 900,
+  "speedMultiplier": 1,
+  "enemyPool": ["basic"],
+  "boss": {
+    "hp": 40,
+    "bulletInterval": 900,
+    "bulletSpeed": 230
+  }
+}
