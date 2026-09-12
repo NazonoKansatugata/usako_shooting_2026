@@ -20,3 +20,20 @@ npm run dev
 ## フェーズ0の進行
 
 敵を倒しながら 25 秒進むとボスが出現します。ボスを倒すと `STAGE CLEAR!`、HP が 0 になると `GAME OVER` です。
+
+## ディレクトリ構成（フェーズ1並行開発対応）
+
+```
+src/
+├── config.ts              # ゲーム全体設定（解像度、スピード、HP等）
+├── types/                 # 共通型定義
+├── entities/              # ゲームオブジェクト（Player, Enemy, Boss, Bullet）
+├── managers/              # 各種マネージャー（EnemyFactory 等）
+├── scenes/                # シーン（ShootingScene 等）
+└── main.ts                # ゲームエントリーポイント
+```
+
+## フェーズ1 開発分担の参考
+- **A：ゲーム内容** (`src/entities/Enemy.ts`, `src/entities/Boss.ts`, `src/managers/EnemyFactory.ts` やステージデータ等)
+- **B：演出・ストーリー** (会話UI, イベント演出, データ等)
+- **C：基盤・ロード** (`AssetManager`, `ObjectPool`, `EventManager` 等)
