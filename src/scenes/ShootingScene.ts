@@ -147,7 +147,7 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   /** ボス撃破後、次ステージへ進む前にリザルトを表示してプレイヤーの入力を待つ。 */
-  private enterStageClear(): void {
+  private enterStageClear(clearedStage: number): void {
     this.mode = 'stageClear';
     if (this.player?.active) this.player.setVelocity(0, 0);
 
@@ -156,7 +156,6 @@ export class ShootingScene extends Phaser.Scene {
     this.enemies.clear(true, true);
     this.enemyBullets.clear(true, true);
 
-    const clearedStage = this.stageManager.stageNumber - 1;
     const clearSeconds = (this.stageTime / 1000).toFixed(1);
     const hp = Math.max(0, this.player.hp);
 
@@ -178,6 +177,7 @@ export class ShootingScene extends Phaser.Scene {
 
     this.banner.setVisible(false);
     this.instruction.setVisible(false);
+    this.updateHud();
   }
 
   private firePlayerBullet(): void {
@@ -276,8 +276,9 @@ export class ShootingScene extends Phaser.Scene {
     if (defeated) {
       // takeDamage()内でactiveが即falseになりupdateHud()の分岐に乗らなくなるため、撃破時点のHPを明示的に0で反映する
       this.progressText.setText(`BOSS  0 / ${this.stageManager.current.boss.hp}`);
+      const clearedStage = this.stageManager.stageNumber;
       if (this.stageManager.advance()) {
-        this.enterStageClear();
+        this.enterStageClear(clearedStage);
       } else {
         this.finish('clear');
       }
