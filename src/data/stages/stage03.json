@@ -1,0 +1,13 @@
+{
+  "id": "stage03",
+  "name": "ステージ3",
+  "duration": 30000,
+  "spawnInterval": 650,
+  "speedMultiplier": 1.3,
+  "enemyPool": ["basic", "fast", "fast"],
+  "boss": {
+    "hp": 75,
+    "bulletInterval": 600,
+    "bulletSpeed": 290
+  }
+}
