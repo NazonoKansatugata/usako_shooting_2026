@@ -6,6 +6,7 @@ import { Boss } from '../entities/Boss';
 import { Bullet } from '../entities/Bullet';
 import { EnemyFactory } from '../managers/EnemyFactory';
 import { StageManager } from '../managers/StageManager';
+import { SettingsManager } from '../managers/SettingsManager';
 
 export class ShootingScene extends Phaser.Scene {
   private player!: Player;
@@ -14,10 +15,11 @@ export class ShootingScene extends Phaser.Scene {
   private enemyBullets!: Phaser.Physics.Arcade.Group;
   private boss?: Boss;
   private stageManager = new StageManager();
+  private settingsManager = SettingsManager.getInstance();
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
-  private mode: GameMode = 'title';
+  private mode: GameMode = 'playing';
 
   private stageTime = 0;
   private spawnTimer = 0;
@@ -40,13 +42,25 @@ export class ShootingScene extends Phaser.Scene {
     this.createGroups();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
-    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,ENTER') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,ENTER,ESC,P,T') as Record<string, Phaser.Input.Keyboard.Key>;
 
     this.createHud();
-    this.showTitle();
+    this.startGame();
 
     this.input.keyboard!.on('keydown-ENTER', () => {
-      if (this.mode !== 'playing') this.startGame();
+      if (this.mode === 'gameOver' || this.mode === 'clear') {
+        this.startGame();
+      }
+    });
+
+    this.input.keyboard!.on('keydown-ESC', () => {
+      this.scene.start('title');
+    });
+
+    this.input.keyboard!.on('keydown-T', () => {
+      if (this.mode === 'gameOver' || this.mode === 'clear') {
+        this.scene.start('title');
+      }
     });
   }
 
@@ -73,6 +87,8 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private createTextures(): void {
+    if (this.textures.exists('player')) return;
+
     const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.fillStyle(0xf6d365).fillCircle(18, 18, 16).generateTexture('player', 36, 36);
     graphics.clear().fillStyle(0xff6b6b).fillTriangle(0, 20, 34, 0, 34, 40).generateTexture('enemy', 34, 40);
@@ -97,13 +113,6 @@ export class ShootingScene extends Phaser.Scene {
     this.instruction = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 55, '', {
       fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '19px', color: '#a9d6e5', align: 'center', lineSpacing: 8,
     }).setOrigin(0.5).setDepth(6);
-  }
-
-  private showTitle(): void {
-    this.banner.setText('うさこシューティング').setVisible(true);
-    this.instruction.setText('矢印キー / WASD：移動\nSPACE：発射　　 ENTER：ゲーム開始').setVisible(true);
-    this.hpText.setVisible(false);
-    this.progressText.setVisible(false);
   }
 
   private startGame(): void {
@@ -272,7 +281,7 @@ export class ShootingScene extends Phaser.Scene {
     this.bullets.setVelocityX(0);
     this.enemyBullets.setVelocity(0, 0);
     this.banner.setText(mode === 'clear' ? 'ALL STAGE CLEAR!' : 'GAME OVER').setVisible(true);
-    this.instruction.setText('ENTER：もう一度プレイ').setVisible(true);
+    this.instruction.setText('ENTER：もう一度プレイ　　ESC / T：タイトルへ戻る').setVisible(true);
   }
 
   private updateHud(): void {

@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
+import { SettingsManager } from '../managers/SettingsManager';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private _isInvulnerable = false;
-  private _hp = GAME_CONFIG.PLAYER_HP;
+  private _hp: number = GAME_CONFIG.PLAYER_HP;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'player');
@@ -43,11 +44,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(vx, vy);
   }
 
-  public damage(): boolean {
+  public damage(customDamage?: number): boolean {
     if (this._isInvulnerable || !this.active) return false;
 
-    this._hp -= 1;
+    const settings = SettingsManager.getInstance();
+    // 難易度設定(難だと敵から受けるダメージが2倍になる)
+    const baseDamage = customDamage ?? (settings.difficulty === 'hard' ? 2 : 1);
+    this._hp -= baseDamage;
     if (this._hp <= 0) {
+      this._hp = 0;
       return true; // 死亡
     }
 
