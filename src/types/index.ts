@@ -1,2 +1,2 @@
-export type GameMode = 'title' | 'playing' | 'gameOver' | 'clear';
+export type GameMode = 'title' | 'playing' | 'stageClear' | 'gameOver' | 'clear';
 export type Difficulty = 'normal' | 'hard';

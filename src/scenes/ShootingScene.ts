@@ -48,7 +48,9 @@ export class ShootingScene extends Phaser.Scene {
     this.startGame();
 
     this.input.keyboard!.on('keydown-ENTER', () => {
-      if (this.mode === 'gameOver' || this.mode === 'clear') {
+      if (this.mode === 'stageClear') {
+        this.startNextStage();
+      } else if (this.mode === 'gameOver' || this.mode === 'clear') {
         this.startGame();
       }
     });
@@ -144,17 +146,38 @@ export class ShootingScene extends Phaser.Scene {
     this.updateHud();
   }
 
+  /** ボス撃破後、次ステージへ進む前にリザルトを表示してプレイヤーの入力を待つ。 */
+  private enterStageClear(): void {
+    this.mode = 'stageClear';
+    if (this.player?.active) this.player.setVelocity(0, 0);
+
+    // 残っている雑魚・弾を片付けてリザルト画面らしい見た目にする
+    this.bullets.clear(true, true);
+    this.enemies.clear(true, true);
+    this.enemyBullets.clear(true, true);
+
+    const clearedStage = this.stageManager.stageNumber - 1;
+    const clearSeconds = (this.stageTime / 1000).toFixed(1);
+    const hp = Math.max(0, this.player.hp);
+
+    this.banner.setText(`STAGE ${clearedStage} CLEAR`).setVisible(true);
+    this.instruction.setText(
+      `クリアタイム：${clearSeconds}秒　　残りHP：${hp}/${GAME_CONFIG.PLAYER_HP}\n\nENTER：次のステージへ`,
+    ).setVisible(true);
+  }
+
   private startNextStage(): void {
-    const clearedNumber = this.stageManager.stageNumber - 1;
+    this.mode = 'playing';
     this.stageTime = 0;
     this.spawnTimer = 0;
     this.bossShotTimer = 0;
+    this.fireTimer = 0;
     this.boss = undefined;
     this.enemies.clear(true, true);
     this.enemyBullets.clear(true, true);
 
-    this.banner.setText(`STAGE ${clearedNumber} CLEAR`).setVisible(true);
-    this.time.delayedCall(1300, () => this.banner.setVisible(false));
+    this.banner.setVisible(false);
+    this.instruction.setVisible(false);
   }
 
   private firePlayerBullet(): void {
@@ -251,8 +274,10 @@ export class ShootingScene extends Phaser.Scene {
     bullet.disableBody(true, true);
     const defeated = this.boss.takeDamage(1);
     if (defeated) {
+      // takeDamage()内でactiveが即falseになりupdateHud()の分岐に乗らなくなるため、撃破時点のHPを明示的に0で反映する
+      this.progressText.setText(`BOSS  0 / ${this.stageManager.current.boss.hp}`);
       if (this.stageManager.advance()) {
-        this.startNextStage();
+        this.enterStageClear();
       } else {
         this.finish('clear');
       }
