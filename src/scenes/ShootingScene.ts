@@ -41,6 +41,12 @@ export class ShootingScene extends Phaser.Scene {
     super('shooting');
   }
 
+  preload(): void {
+    this.load.audio('se_enemy_defeat', 'assets/se/311(敵撃破音).mp3');
+    this.load.audio('se_player_hit', 'assets/se/153(被弾).mp3');
+    this.load.audio('se_boss_alert', 'assets/se/1266(ボス出現アラート).mp3');
+  }
+
   create(): void {
     // 物理ワールドの範囲をプレイエリア (960 x 420) に設定
     this.physics.world.setBounds(0, 0, GAME_CONFIG.PLAY_AREA.WIDTH, GAME_CONFIG.PLAY_AREA.HEIGHT);
@@ -256,6 +262,7 @@ export class ShootingScene extends Phaser.Scene {
   private spawnBoss(): void {
     this.boss = new Boss(this, GAME_CONFIG.WIDTH - 100, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
     this.boss.spawn(GAME_CONFIG.WIDTH - 100, GAME_CONFIG.PLAY_AREA.HEIGHT / 2, this.stageManager.current.boss.hp);
+    this.sound.play('se_boss_alert', { volume: 0.7 });
 
     this.banner.setText('BOSS INCOMING').setVisible(true);
     this.time.delayedCall(1300, () => this.banner.setVisible(false));
@@ -290,6 +297,7 @@ export class ShootingScene extends Phaser.Scene {
     if (!bullet || !enemy || !bullet.active || !enemy.active) return;
     bullet.disableBody(true, true);
     enemy.disableBody(true, true);
+    this.sound.play('se_enemy_defeat', { volume: 0.45 });
   }
 
   private hitBoss(object1: any, object2: any): void {
@@ -318,6 +326,7 @@ export class ShootingScene extends Phaser.Scene {
     }
 
     const dead = this.player.damage();
+    this.sound.play('se_player_hit', { volume: 0.6 });
     this.updateHud();
 
     if (dead) {
