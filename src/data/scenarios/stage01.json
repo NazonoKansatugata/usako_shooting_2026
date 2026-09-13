@@ -1,0 +1,26 @@
+{
+  "stageId": "stage01",
+  "dialogues": [
+    {
+      "id": "s1_01",
+      "triggerPercent": 0,
+      "speaker": "うさこ",
+      "text": "うさこ「作戦開始！全機、前方の敵を撃退せよ！」",
+      "duration": 4000
+    },
+    {
+      "id": "s1_02",
+      "triggerPercent": 50,
+      "speaker": "ナビ",
+      "text": "ナビ「ステージ中盤です！敵の反応が強くなっています！」",
+      "duration": 4000
+    },
+    {
+      "id": "s1_03",
+      "triggerPercent": 95,
+      "speaker": "たぬきボス",
+      "text": "たぬきボス「ここから先は通さんぽん！覚悟するぽん！」",
+      "duration": 5000
+    }
+  ]
+}

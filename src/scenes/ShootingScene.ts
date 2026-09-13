@@ -7,6 +7,8 @@ import { Bullet } from '../entities/Bullet';
 import { EnemyFactory } from '../managers/EnemyFactory';
 import { StageManager } from '../managers/StageManager';
 import { SettingsManager } from '../managers/SettingsManager';
+import { DialogueWindow } from '../ui/DialogueWindow';
+import { StoryManager } from '../managers/StoryManager';
 
 export class ShootingScene extends Phaser.Scene {
   private player!: Player;
@@ -16,6 +18,8 @@ export class ShootingScene extends Phaser.Scene {
   private boss?: Boss;
   private stageManager = new StageManager();
   private settingsManager = SettingsManager.getInstance();
+  private dialogueWindow!: DialogueWindow;
+  private storyManager!: StoryManager;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -38,11 +42,17 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   create(): void {
+    // 物理ワールドの範囲をプレイエリア (960 x 420) に設定
+    this.physics.world.setBounds(0, 0, GAME_CONFIG.PLAY_AREA.WIDTH, GAME_CONFIG.PLAY_AREA.HEIGHT);
+
     this.createTextures();
     this.createGroups();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,ENTER,ESC,P,T') as Record<string, Phaser.Input.Keyboard.Key>;
+
+    this.dialogueWindow = new DialogueWindow(this);
+    this.storyManager = new StoryManager(this.dialogueWindow);
 
     this.createHud();
     this.startGame();
@@ -68,6 +78,12 @@ export class ShootingScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     this.drawBackground(delta);
+
+    // 下画面の戦況モニターはゲームモードに関わらず（あるいはplaying時に）常時更新
+    const stageDuration = this.stageManager.current.duration;
+    const stageProgressPct = Math.min(100, (this.stageTime / stageDuration) * 100);
+    this.dialogueWindow.update(delta, stageProgressPct);
+
     if (this.mode !== 'playing') return;
 
     this.stageTime += delta;
@@ -79,8 +95,9 @@ export class ShootingScene extends Phaser.Scene {
     this.firePlayerBullet();
     this.updateEnemies();
     this.updateHud();
+    this.storyManager.update(this.stageTime, stageDuration);
 
-    if (this.stageTime >= this.stageManager.current.duration && (!this.boss || !this.boss.active)) {
+    if (this.stageTime >= stageDuration && (!this.boss || !this.boss.active)) {
       this.spawnBoss();
     }
     if (this.boss && this.boss.active && this.bossShotTimer > this.stageManager.current.boss.bulletInterval) {
@@ -109,10 +126,10 @@ export class ShootingScene extends Phaser.Scene {
   private createHud(): void {
     this.hpText = this.add.text(24, 20, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '20px', color: '#f6d365' }).setDepth(5);
     this.progressText = this.add.text(GAME_CONFIG.WIDTH - 24, 20, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '18px', color: '#a9d6e5' }).setOrigin(1, 0).setDepth(5);
-    this.banner = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 35, '', {
+    this.banner = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 35, '', {
       fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '48px', color: '#f8f7f2', align: 'center', stroke: '#12263a', strokeThickness: 8,
     }).setOrigin(0.5).setDepth(6);
-    this.instruction = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 + 55, '', {
+    this.instruction = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 + 55, '', {
       fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '19px', color: '#a9d6e5', align: 'center', lineSpacing: 8,
     }).setOrigin(0.5).setDepth(6);
   }
@@ -132,7 +149,7 @@ export class ShootingScene extends Phaser.Scene {
     this.enemyBullets.clear(true, true);
 
     if (this.player?.active) this.player.destroy();
-    this.player = new Player(this, 130, GAME_CONFIG.HEIGHT / 2);
+    this.player = new Player(this, 130, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
     this.player.resetStats();
 
     this.physics.add.overlap(this.bullets, this.enemies, this.hitEnemy, undefined, this);
@@ -143,6 +160,8 @@ export class ShootingScene extends Phaser.Scene {
     this.instruction.setVisible(false);
     this.hpText.setVisible(true);
     this.progressText.setVisible(true);
+
+    this.storyManager.loadScenario(this.stageManager.current.id);
     this.updateHud();
   }
 
@@ -150,6 +169,9 @@ export class ShootingScene extends Phaser.Scene {
   private enterStageClear(clearedStage: number): void {
     this.mode = 'stageClear';
     if (this.player?.active) this.player.setVelocity(0, 0);
+
+    // 会話ウィンドウをクリア
+    this.dialogueWindow.hideDialogue();
 
     // 残っている雑魚・弾を片付けてリザルト画面らしい見た目にする
     this.bullets.clear(true, true);
@@ -177,6 +199,8 @@ export class ShootingScene extends Phaser.Scene {
 
     this.banner.setVisible(false);
     this.instruction.setVisible(false);
+
+    this.storyManager.loadScenario(this.stageManager.current.id);
     this.updateHud();
   }
 
@@ -199,7 +223,7 @@ export class ShootingScene extends Phaser.Scene {
     const stage = this.stageManager.current;
     if (this.spawnTimer > stage.spawnInterval && this.stageTime < stage.duration) {
       this.spawnTimer = 0;
-      const spawnY = Phaser.Math.Between(70, GAME_CONFIG.HEIGHT - 70);
+      const spawnY = Phaser.Math.Between(40, GAME_CONFIG.PLAY_AREA.HEIGHT - 40);
       const enemyType = this.stageManager.pickEnemyType();
       EnemyFactory.create(this, this.enemies, GAME_CONFIG.WIDTH + 30, spawnY, enemyType, stage.speedMultiplier);
     }
@@ -222,7 +246,7 @@ export class ShootingScene extends Phaser.Scene {
 
     this.enemyBullets.children.each((child: Phaser.GameObjects.GameObject) => {
       const sprite = child as Phaser.Physics.Arcade.Sprite;
-      if (sprite.active && (sprite.x < -30 || sprite.x > GAME_CONFIG.WIDTH + 30 || sprite.y < -30 || sprite.y > GAME_CONFIG.HEIGHT + 30)) {
+      if (sprite.active && (sprite.x < -30 || sprite.x > GAME_CONFIG.WIDTH + 30 || sprite.y < -30 || sprite.y > GAME_CONFIG.PLAY_AREA.HEIGHT + 30)) {
         sprite.disableBody(true, true);
       }
       return true;
@@ -230,8 +254,8 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private spawnBoss(): void {
-    this.boss = new Boss(this, GAME_CONFIG.WIDTH - 100, GAME_CONFIG.HEIGHT / 2);
-    this.boss.spawn(GAME_CONFIG.WIDTH - 100, GAME_CONFIG.HEIGHT / 2, this.stageManager.current.boss.hp);
+    this.boss = new Boss(this, GAME_CONFIG.WIDTH - 100, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
+    this.boss.spawn(GAME_CONFIG.WIDTH - 100, GAME_CONFIG.PLAY_AREA.HEIGHT / 2, this.stageManager.current.boss.hp);
 
     this.banner.setText('BOSS INCOMING').setVisible(true);
     this.time.delayedCall(1300, () => this.banner.setVisible(false));
@@ -306,6 +330,7 @@ export class ShootingScene extends Phaser.Scene {
     if (this.player?.active) this.player.setVelocity(0, 0);
     this.bullets.setVelocityX(0);
     this.enemyBullets.setVelocity(0, 0);
+    this.dialogueWindow.hideDialogue();
     this.banner.setText(mode === 'clear' ? 'ALL STAGE CLEAR!' : 'GAME OVER').setVisible(true);
     this.instruction.setText('ENTER：もう一度プレイ　　ESC / T：タイトルへ戻る').setVisible(true);
   }
@@ -328,9 +353,9 @@ export class ShootingScene extends Phaser.Scene {
     if (!this.backgroundGrid) this.backgroundGrid = this.add.graphics().setDepth(-1);
     this.backgroundGrid.clear().lineStyle(1, 0x1f4058, 0.7);
     for (let x = -48 + this.backgroundOffset; x < GAME_CONFIG.WIDTH + 48; x += 48) {
-      this.backgroundGrid.lineBetween(x, 0, x, GAME_CONFIG.HEIGHT);
+      this.backgroundGrid.lineBetween(x, 0, x, GAME_CONFIG.PLAY_AREA.HEIGHT);
     }
-    for (let y = 0; y < GAME_CONFIG.HEIGHT; y += 48) {
+    for (let y = 0; y <= GAME_CONFIG.PLAY_AREA.HEIGHT; y += 48) {
       this.backgroundGrid.lineBetween(0, y, GAME_CONFIG.WIDTH, y);
     }
   }

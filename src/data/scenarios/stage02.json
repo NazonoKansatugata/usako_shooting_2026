@@ -1,0 +1,19 @@
+{
+  "stageId": "stage02",
+  "dialogues": [
+    {
+      "id": "s2_01",
+      "triggerPercent": 0,
+      "speaker": "うさこ",
+      "text": "うさこ「第2エリアに到達。高速型の敵機に注意して！」",
+      "duration": 4000
+    },
+    {
+      "id": "s2_02",
+      "triggerPercent": 60,
+      "speaker": "ナビ",
+      "text": "ナビ「前方より大型熱源反応をキャッチ！間もなく接敵します！」",
+      "duration": 4000
+    }
+  ]
+}
