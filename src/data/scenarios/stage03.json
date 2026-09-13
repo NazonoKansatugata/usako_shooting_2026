@@ -1,0 +1,26 @@
+{
+  "stageId": "stage03",
+  "dialogues": [
+    {
+      "id": "s3_01",
+      "triggerPercent": 0,
+      "speaker": "うさこ",
+      "text": "うさこ「最終決戦エリアよ！気を引き締めていこう！」",
+      "duration": 4000
+    },
+    {
+      "id": "s3_02",
+      "triggerPercent": 50,
+      "speaker": "ナビ",
+      "text": "ナビ「これまでのデータを総力結集して突破してください！」",
+      "duration": 4000
+    },
+    {
+      "id": "s3_03",
+      "triggerPercent": 95,
+      "speaker": "ラスボス",
+      "text": "ラスボス「よくぞここまで来た。だが我が圧倒的パワーの前に散るがよい！」",
+      "duration": 5000
+    }
+  ]
+}
