@@ -8,7 +8,6 @@ import { renderDedication } from './opening/scene1';
 import { renderTelescope } from './opening/scene2';
 import { renderMoon } from './opening/scene3';
 import { renderImpact } from './opening/scene4';
-import { renderTitle } from './opening/scene5';
 import { renderFinalTitle } from './opening/scene9';
 import { renderCharacters } from './opening/scene6';
 import { renderStory } from './opening/scene7';
@@ -41,6 +40,10 @@ export class OpeningScene extends Phaser.Scene {
     this.load.image('opening_nekoko_scene2_1', 'assets/picture/player/DefineSprite_54/1.png');
     this.load.image('opening_nekoko_scene2_3', 'assets/picture/player/DefineSprite_54/3.png');
     this.load.image('opening_nekoko_scene3_5', 'assets/picture/player/DefineSprite_54/5.png');
+    this.load.image('opening_title', 'assets/picture/title.png');
+    this.load.image('opening_usako_scene6_1', 'assets/picture/player/DefineSprite_44/1.png');
+    this.load.image('opening_nekoko_scene6_3', 'assets/picture/player/DefineSprite_54/3.png');
+    this.load.image('opening_keroko_scene6_4', 'assets/picture/player/DefineSprite_190/4.png');
   }
 
   create(): void {
@@ -140,7 +143,6 @@ export class OpeningScene extends Phaser.Scene {
       case 'telescope': renderTelescope(context); break;
       case 'moon': renderMoon(context, this.elapsed); break;
       case 'impact': renderImpact(context); break;
-      case 'title': renderTitle(context); break;
       case 'characters': renderCharacters(context); break;
       case 'story': renderStory(context); break;
       case 'gameplay': renderGameplay(context); break;

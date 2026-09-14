@@ -54,6 +54,20 @@ export function renderImpact(context: OpeningCutContext): void {
   context.layer.add([usako, nekoko]);
   context.scene.tweens.add({ targets: usako, x: -100, y: 330, angle: -28, duration: 4000, ease: 'Sine.easeIn' });
   context.scene.tweens.add({ targets: nekoko, x: 1060, y: 345, angle: 26, duration: 4000, ease: 'Sine.easeIn' });
+
+  // 爆発後、画面奥からタイトルがゆっくりとアップで現れる。
+  const title = context.scene.add.image(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2, 'opening_title')
+    .setDisplaySize(780, 410).setScale(0.3).setAlpha(0).setDepth(11);
+  context.layer.add(title);
+  context.scene.time.delayedCall(1450, () => {
+    context.scene.tweens.add({
+      targets: title,
+      alpha: 1,
+      scale: 0.5,
+      duration: 1500,
+      ease: 'Sine.easeOut',
+    });
+  });
 }
 
 function createDebris(context: OpeningCutContext): void {
