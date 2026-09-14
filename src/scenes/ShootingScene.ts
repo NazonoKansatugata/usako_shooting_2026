@@ -8,6 +8,7 @@ import { Enemy } from '../entities/Enemy';
 import { EnemyFactory } from '../managers/EnemyFactory';
 import { StageManager } from '../managers/StageManager';
 import { SettingsManager } from '../managers/SettingsManager';
+import { SaveManager } from '../managers/SaveManager';
 import { DialogueWindow } from '../ui/DialogueWindow';
 import { StoryManager } from '../managers/StoryManager';
 
@@ -23,6 +24,7 @@ export class ShootingScene extends Phaser.Scene {
   private boss?: Boss;
   private stageManager = new StageManager();
   private settingsManager = SettingsManager.getInstance();
+  private saveManager = SaveManager.getInstance();
   private dialogueWindow!: DialogueWindow;
   private storyManager!: StoryManager;
   private stageBgm?: Phaser.Sound.BaseSound;
@@ -37,11 +39,15 @@ export class ShootingScene extends Phaser.Scene {
   private bossShotTimer = 0;
   private fireTimer = 0;
   private bossPreEventTriggered = false;
+  private score = 0;
+  private static readonly SCORE_ENEMY_DEFEAT = 100;
+  private static readonly SCORE_BOSS_DEFEAT = 3000;
   private backgroundOffset = 0;
   private backgroundGrid?: Phaser.GameObjects.Graphics;
 
   private hpText!: Phaser.GameObjects.Text;
   private progressText!: Phaser.GameObjects.Text;
+  private scoreText!: Phaser.GameObjects.Text;
   private banner!: Phaser.GameObjects.Text;
   private instruction!: Phaser.GameObjects.Text;
 
@@ -167,6 +173,7 @@ export class ShootingScene extends Phaser.Scene {
 
   private createHud(): void {
     this.hpText = this.add.text(24, 20, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '20px', color: '#f6d365' }).setDepth(5);
+    this.scoreText = this.add.text(24, 46, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '16px', color: '#f8f7f2' }).setDepth(5);
     this.progressText = this.add.text(GAME_CONFIG.WIDTH - 24, 20, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '18px', color: '#a9d6e5' }).setOrigin(1, 0).setDepth(5);
     this.banner = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 35, '', {
       fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '48px', color: '#f8f7f2', align: 'center', stroke: '#12263a', strokeThickness: 8,
@@ -182,6 +189,7 @@ export class ShootingScene extends Phaser.Scene {
     this.stageTime = 0;
     this.fireTimer = 0;
     this.bossPreEventTriggered = false;
+    this.score = 0;
 
     if (this.boss?.active) this.boss.destroy();
     this.boss = undefined;
@@ -225,6 +233,7 @@ export class ShootingScene extends Phaser.Scene {
 
     const clearSeconds = (this.stageTime / 1000).toFixed(1);
     const hp = Math.max(0, this.player.hp);
+    this.saveManager.reportStageCleared(clearedStage, this.settingsManager.difficulty);
 
     this.banner.setText(`STAGE ${clearedStage} CLEAR`).setVisible(true);
     this.instruction.setText(
@@ -370,6 +379,8 @@ export class ShootingScene extends Phaser.Scene {
     bullet.disableBody(true, true);
     enemy.disableBody(true, true);
     this.sound.play('se_enemy_defeat', { volume: 0.45 });
+    this.score += ShootingScene.SCORE_ENEMY_DEFEAT;
+    this.updateHud();
   }
 
   private hitBoss(object1: any, object2: any): void {
@@ -378,8 +389,10 @@ export class ShootingScene extends Phaser.Scene {
     bullet.disableBody(true, true);
     const defeated = this.boss.takeDamage(1);
     if (defeated) {
+      this.score += ShootingScene.SCORE_BOSS_DEFEAT;
       // takeDamage()内でactiveが即falseになりupdateHud()の分岐に乗らなくなるため、撃破時点のHPを明示的に0で反映する
       this.progressText.setText(`BOSS  0 / ${this.stageManager.current.boss.hp}`);
+      this.scoreText.setText(`SCORE  ${this.score}`);
       const clearedStage = this.stageManager.stageNumber;
       this.storyManager.triggerBossDefeatEvent(() => {
         if (this.stageManager.advance()) {
@@ -419,8 +432,19 @@ export class ShootingScene extends Phaser.Scene {
     this.enemyBullets.setVelocity(0, 0);
     this.dialogueWindow.hideDialogue();
     if (mode === 'gameOver') this.player.startDeathAnimation();
+
+    const difficulty = this.settingsManager.difficulty;
+    if (mode === 'clear') {
+      this.saveManager.reportStageCleared(this.stageManager.stageNumber, difficulty);
+      this.saveManager.reportAllCleared(difficulty);
+    }
+    const isNewHighScore = this.saveManager.reportScore(this.score);
+
     this.banner.setText(mode === 'clear' ? 'ALL STAGE CLEAR!' : 'GAME OVER').setVisible(true);
-    this.instruction.setText('ENTER：もう一度プレイ　　ESC / T：タイトルへ戻る').setVisible(true);
+    const highScoreLine = isNewHighScore ? '\n★ NEW HIGH SCORE ★' : `\nハイスコア：${this.saveManager.highScore}`;
+    this.instruction.setText(
+      `SCORE：${this.score}${highScoreLine}\n\nENTER：もう一度プレイ　　ESC / T：タイトルへ戻る`,
+    ).setVisible(true);
   }
 
   private playStageBgm(): void {
@@ -473,6 +497,7 @@ export class ShootingScene extends Phaser.Scene {
   private updateHud(): void {
     const hp = this.player ? Math.max(0, this.player.hp) : GAME_CONFIG.PLAYER_HP;
     this.hpText.setText(`HP  ${'●'.repeat(hp)}${'○'.repeat(GAME_CONFIG.PLAYER_HP - hp)}`);
+    this.scoreText.setText(`SCORE  ${this.score}`);
 
     if (this.boss && this.boss.active) {
       this.progressText.setText(`BOSS  ${this.boss.hp} / ${this.stageManager.current.boss.hp}`);

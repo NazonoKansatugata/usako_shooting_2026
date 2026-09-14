@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
 import { SettingsManager } from '../managers/SettingsManager';
+import { SaveManager } from '../managers/SaveManager';
 
 interface MenuItem {
   text: string;
@@ -215,8 +216,11 @@ export class TitleScene extends Phaser.Scene {
         description: '基本操作、攻撃方法、ゲームルールや敵の説明を確認します。',
         action: () => this.showHowToPlayModal(),
       },
-      {
-        text: 'オプション (Options)',
+      {        text: '記録 (Records)',
+        description: 'ハイスコアやクリア状況などのプレイ記録を確認します。',
+        action: () => this.showRecordsModal(),
+      },
+      {        text: 'オプション (Options)',
         description: '難易度、音量、キー設定、クレジットなどを変更・確認します。',
         action: () => this.scene.start('option'),
       },
@@ -344,6 +348,24 @@ export class TitleScene extends Phaser.Scene {
       '・敵や敵弾に当たるとHPが減少します（HPが0になるとゲームオーバー）。',
       '・ステージ進行度が100%になると巨大ボスが出現！ボス撃破でステージクリア！',
       '・オプションで「難易度」や「音量」のカスタマイズが可能です。',
+    ]);
+  }
+
+  private showRecordsModal(): void {
+    const saveManager = SaveManager.getInstance();
+    const describe = (difficulty: 'normal' | 'hard'): string => {
+      const maxCleared = saveManager.getMaxClearedStage(difficulty);
+      if (saveManager.isAllCleared(difficulty)) return 'ALL CLEAR';
+      return maxCleared > 0 ? `STAGE ${maxCleared} までクリア済` : '未クリア';
+    };
+
+    this.showModal('記録 (RECORDS)', [
+      `ハイスコア：${saveManager.highScore}`,
+      '',
+      `クリア状況（普通）：${describe('normal')}`,
+      `クリア状況（難）　：${describe('hard')}`,
+      '',
+      '※記録はオプションの「データ削除」からいつでも消去できます。',
     ]);
   }
 
