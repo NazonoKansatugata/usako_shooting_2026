@@ -33,6 +33,14 @@ export class OpeningScene extends Phaser.Scene {
 
   preload(): void {
     this.load.audio('opening_bgm', 'assets/bgm/300_36-1514(オープニング).mp3');
+    this.load.image('opening_logo_2006', 'assets/sprites/DefineSprite_27/1.png');
+    this.load.image('opening_logo_2026', 'assets/picture/ver.png');
+    this.load.image('opening_usako_scene2_1', 'assets/picture/player/DefineSprite_44/1.png');
+    this.load.image('opening_usako_scene2_3', 'assets/picture/player/DefineSprite_44/3.png');
+    this.load.image('opening_usako_scene3_5', 'assets/picture/player/DefineSprite_44/5.png');
+    this.load.image('opening_nekoko_scene2_1', 'assets/picture/player/DefineSprite_54/1.png');
+    this.load.image('opening_nekoko_scene2_3', 'assets/picture/player/DefineSprite_54/3.png');
+    this.load.image('opening_nekoko_scene3_5', 'assets/picture/player/DefineSprite_54/5.png');
   }
 
   create(): void {

@@ -1,9 +1,9 @@
 export const OPENING_TIMELINE = {
-  preludeDuration: 5,
+  preludeDuration: 10,
   duration: 43,
   segments: [
-    { id: 'dedication', end: 1 },
-    { id: 'telescope', end: 3 },
+    { id: 'dedication', end: 2 },
+    { id: 'telescope', end: 3.25 },
     { id: 'moon', end: 5 },
     { id: 'impact', end: 9 },
     { id: 'title', end: 11 },
