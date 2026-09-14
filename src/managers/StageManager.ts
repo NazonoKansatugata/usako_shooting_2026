@@ -64,6 +64,17 @@ export class StageManager {
     return true;
   }
 
+  /** デバッグ用：指定インデックスのステージへ直接ジャンプする（範囲外は端にクランプ）。 */
+  public jumpToStage(index: number): void {
+    this.index = Math.max(0, Math.min(index, STAGES.length - 1));
+    this.spawnCursor = 0;
+  }
+
+  /** デバッグ用：残りの雑魚敵出現イベントをすべて消化済み扱いにする（ボス直行用）。 */
+  public skipAllSpawnEvents(): void {
+    this.spawnCursor = this.current.spawnEvents.length;
+  }
+
   /** stageTime(ms)時点で発生済みになった、まだ消化していない出現イベントをまとめて返す。 */
   public collectDueSpawnEvents(stageTime: number): SpawnEvent[] {
     const events = this.current.spawnEvents;
