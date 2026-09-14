@@ -3,10 +3,15 @@ import { GAME_CONFIG } from '../config';
 import { SettingsManager } from '../managers/SettingsManager';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
+  private static readonly HIT_IMAGE_OFFSET_X = 0;
+  private static readonly HIT_IMAGE_OFFSET_Y = -30;
+
   private _isInvulnerable = false;
   private _hp: number = GAME_CONFIG.PLAYER_HP;
   private readonly wingSprite: Phaser.GameObjects.Sprite;
   private readonly airCannon: Phaser.GameObjects.Sprite;
+  private readonly hitSprite: Phaser.GameObjects.Sprite;
+  private isDying = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'player-base');
@@ -16,6 +21,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.wingSprite = scene.add.sprite(x, y - 2, 'player-wing-1');
     this.wingSprite.play('player-flight');
     this.airCannon = scene.add.sprite(x + 15, y + 4, 'player-air-cannon');
+    this.hitSprite = scene.add.sprite(x, y, 'player-hit');
+    this.hitSprite.setVisible(false);
 
     this.setCollideWorldBounds(true);
     // 喰らい判定を中央の小さな円（半径8px, オフセット10, 10）に設定
@@ -37,6 +44,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public destroy(fromScene?: boolean): void {
     this.wingSprite.destroy(fromScene);
     this.airCannon.destroy(fromScene);
+    this.hitSprite.destroy(fromScene);
     super.destroy(fromScene);
   }
 
@@ -51,13 +59,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public resetStats(): void {
     this._hp = GAME_CONFIG.PLAYER_HP;
     this._isInvulnerable = false;
+    this.isDying = false;
     this.setAlpha(1);
     this.setActive(true);
     this.setVisible(true);
+    (this.body as Phaser.Physics.Arcade.Body).enable = true;
+    this.hitSprite.setVisible(false);
   }
 
   public move(cursors: Phaser.Types.Input.Keyboard.CursorKeys, keys: Record<string, Phaser.Input.Keyboard.Key>): void {
-    if (!this.active) return;
+    if (!this.active || this.isDying) return;
     const left = cursors.left.isDown || keys.A.isDown;
     const right = cursors.right.isDown || keys.D.isDown;
     const up = cursors.up.isDown || keys.W.isDown;
@@ -66,6 +77,40 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const vx = (right ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED - (left ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED;
     const vy = (down ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED - (up ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED;
     this.setVelocity(vx, vy);
+  }
+
+  public startDeathAnimation(): void {
+    if (this.isDying) return;
+    this.isDying = true;
+    this.setVelocity(0, 0);
+    (this.body as Phaser.Physics.Arcade.Body).enable = false;
+    this.setVisible(false);
+    this.wingSprite.setVisible(false);
+    this.airCannon.setVisible(false);
+    this.hitSprite.setPosition(
+      this.x + Player.HIT_IMAGE_OFFSET_X,
+      this.y + Player.HIT_IMAGE_OFFSET_Y,
+    ).setAlpha(1).setVisible(true);
+
+    this.scene.tweens.add({
+      targets: this.hitSprite,
+      x: this.x + Player.HIT_IMAGE_OFFSET_X + 64,
+      duration: 360,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: 4,
+    });
+    this.scene.tweens.add({
+      targets: this.hitSprite,
+      y: this.y + 180,
+      alpha: 0,
+      duration: 1800,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        this.hitSprite.setVisible(false);
+        this.setActive(false);
+      },
+    });
   }
 
   public damage(customDamage?: number): boolean {
@@ -79,6 +124,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this._hp = 0;
       return true; // 死亡
     }
+
+    this.showHitImage();
 
     // 被弾後の無敵時間（約1.2秒間、点滅演出）
     this._isInvulnerable = true;
@@ -98,5 +145,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     });
 
     return false;
+  }
+
+  private showHitImage(): void {
+    this.setVisible(false);
+    this.wingSprite.setVisible(false);
+    this.airCannon.setVisible(false);
+    this.hitSprite.setPosition(
+      this.x + Player.HIT_IMAGE_OFFSET_X,
+      this.y + Player.HIT_IMAGE_OFFSET_Y,
+    ).setAlpha(1).setVisible(true);
+
+    this.scene.time.delayedCall(180, () => {
+      if (this.isDying || !this.active) return;
+      this.hitSprite.setVisible(false);
+      this.setVisible(true);
+      this.wingSprite.setVisible(true);
+      this.airCannon.setVisible(true);
+    });
   }
 }
