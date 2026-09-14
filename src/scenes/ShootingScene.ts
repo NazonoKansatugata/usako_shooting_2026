@@ -41,6 +41,9 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.load.image('player-base', 'assets/picture/player/DefineSprite_145/1.png');
+    this.load.image('player-wing-1', 'assets/picture/player/DefineSprite_149/1.png');
+    this.load.image('player-wing-3', 'assets/picture/player/DefineSprite_149/3.png');
     this.load.audio('se_enemy_defeat', 'assets/se/311(敵撃破音).mp3');
     this.load.audio('se_player_hit', 'assets/se/153(被弾).mp3');
     this.load.audio('se_boss_alert', 'assets/se/1266(ボス出現アラート).mp3');
@@ -51,6 +54,7 @@ export class ShootingScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, GAME_CONFIG.PLAY_AREA.WIDTH, GAME_CONFIG.PLAY_AREA.HEIGHT);
 
     this.createTextures();
+    this.createPlayerAnimation();
     this.createGroups();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -110,15 +114,26 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private createTextures(): void {
-    if (this.textures.exists('player')) return;
+    if (this.textures.exists('enemy')) return;
 
     const graphics = this.make.graphics({ x: 0, y: 0 });
-    graphics.fillStyle(0xf6d365).fillCircle(18, 18, 16).generateTexture('player', 36, 36);
+    graphics.fillStyle(0x9aa0a6).fillRect(0, 0, 10, 10).generateTexture('player-air-cannon', 10, 10);
     graphics.clear().fillStyle(0xff6b6b).fillTriangle(0, 20, 34, 0, 34, 40).generateTexture('enemy', 34, 40);
     graphics.clear().fillStyle(0xffc857).fillCircle(10, 10, 10).generateTexture('bullet', 20, 20);
     graphics.clear().fillStyle(0xff4d6d).fillCircle(8, 8, 8).generateTexture('enemyBullet', 16, 16);
     graphics.clear().fillStyle(0xc44569).fillRect(0, 0, 116, 76).generateTexture('boss', 116, 76);
     graphics.destroy();
+  }
+
+  private createPlayerAnimation(): void {
+    if (this.anims.exists('player-flight')) return;
+
+    this.anims.create({
+      key: 'player-flight',
+      frames: [{ key: 'player-wing-1' }, { key: 'player-wing-3' }],
+      frameRate: 12,
+      repeat: -1,
+    });
   }
 
   private createGroups(): void {
