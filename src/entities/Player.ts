@@ -5,15 +5,39 @@ import { SettingsManager } from '../managers/SettingsManager';
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private _isInvulnerable = false;
   private _hp: number = GAME_CONFIG.PLAYER_HP;
+  private readonly wingSprite: Phaser.GameObjects.Sprite;
+  private readonly airCannon: Phaser.GameObjects.Sprite;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, 'player');
+    super(scene, x, y, 'player-base');
     scene.add.existing(this);
     scene.physics.add.existing(this);
+
+    this.wingSprite = scene.add.sprite(x, y - 2, 'player-wing-1');
+    this.wingSprite.play('player-flight');
+    this.airCannon = scene.add.sprite(x + 15, y + 4, 'player-air-cannon');
 
     this.setCollideWorldBounds(true);
     // 喰らい判定を中央の小さな円（半径8px, オフセット10, 10）に設定
     (this.body as Phaser.Physics.Arcade.Body).setCircle(8, 10, 10);
+  }
+
+  public preUpdate(time: number, delta: number): void {
+    super.preUpdate(time, delta);
+    this.wingSprite.setPosition(this.x, this.y - 3);
+    this.wingSprite.setRotation(this.rotation);
+    this.wingSprite.setAlpha(this.alpha);
+    this.wingSprite.setVisible(this.visible);
+    this.airCannon.setPosition(this.x + 15, this.y +4 );
+    this.airCannon.setRotation(this.rotation);
+    this.airCannon.setAlpha(this.alpha);
+    this.airCannon.setVisible(this.visible);
+  }
+
+  public destroy(fromScene?: boolean): void {
+    this.wingSprite.destroy(fromScene);
+    this.airCannon.destroy(fromScene);
+    super.destroy(fromScene);
   }
 
   get isInvulnerable(): boolean {
