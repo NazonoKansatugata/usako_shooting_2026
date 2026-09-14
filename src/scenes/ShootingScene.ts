@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
-import { GameMode } from '../types';
+import { GameMode, EnemyShape } from '../types';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
 import { Bullet } from '../entities/Bullet';
@@ -11,13 +11,16 @@ import { SettingsManager } from '../managers/SettingsManager';
 import { DialogueWindow } from '../ui/DialogueWindow';
 import { StoryManager } from '../managers/StoryManager';
 
+const ENEMY_SHAPES: EnemyShape[] = ['triangle', 'circle', 'square', 'star'];
+
 export class ShootingScene extends Phaser.Scene {
   /** shooterタイプの雑魚敵が画面内に入ってから発射するまでの遅延(ms) */
   private static readonly SHOOT_DELAY_AFTER_ENTRY = 500;
 
   private player!: Player;
   private bullets!: Phaser.Physics.Arcade.Group;
-  private enemies!: Phaser.Physics.Arcade.Group;
+  /** 敵の形状（見た目・当たり判定）ごとに分けたプール。異なる形状の個体が混ざらないようにするため。 */
+  private enemyGroups!: Record<EnemyShape, Phaser.Physics.Arcade.Group>;
   private enemyBullets!: Phaser.Physics.Arcade.Group;
   private boss?: Boss;
   private stageManager = new StageManager();
@@ -118,14 +121,13 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private createTextures(): void {
-    if (this.textures.exists('enemy')) return;
+    // 雑魚敵（三角形・丸・正方形・星）のテクスチャは各Enemyサブクラスが自前で生成する
+    if (this.textures.exists('bullet')) return;
 
     const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.fillStyle(0x9aa0a6).fillRect(0, 0, 10, 10).generateTexture('player-air-cannon', 10, 10);
-    graphics.clear().fillStyle(0xff6b6b).fillTriangle(0, 20, 34, 0, 34, 40).generateTexture('enemy', 34, 40);
-    graphics.clear().fillStyle(0xdc2626).fillTriangle(0, 20, 34, 0, 34, 40).generateTexture('enemyRed', 34, 40);
     graphics.clear().fillStyle(0xffc857).fillCircle(10, 10, 10).generateTexture('bullet', 20, 20);
-    graphics.clear().fillStyle(0xff4d6d).fillCircle(8, 8, 8).generateTexture('enemyBullet', 16, 16);
+    graphics.clear().fillStyle(0xff4d6d).fillCircle(10, 10, 10).generateTexture('enemyBullet', 20, 20);
     graphics.clear().fillStyle(0xc44569).fillRect(0, 0, 116, 76).generateTexture('boss', 116, 76);
     graphics.destroy();
   }
@@ -143,8 +145,17 @@ export class ShootingScene extends Phaser.Scene {
 
   private createGroups(): void {
     this.bullets = this.physics.add.group({ defaultKey: 'bullet', maxSize: 30 });
-    this.enemies = this.physics.add.group({ defaultKey: 'enemy', maxSize: 20 });
+    this.enemyGroups = {} as Record<EnemyShape, Phaser.Physics.Arcade.Group>;
+    for (const shape of ENEMY_SHAPES) {
+      this.enemyGroups[shape] = this.physics.add.group({ maxSize: 20 });
+    }
     this.enemyBullets = this.physics.add.group({ defaultKey: 'enemyBullet', maxSize: 40 });
+  }
+
+  private forEachEnemyGroup(fn: (group: Phaser.Physics.Arcade.Group) => void): void {
+    for (const shape of ENEMY_SHAPES) {
+      fn(this.enemyGroups[shape]);
+    }
   }
 
   private createHud(): void {
@@ -168,16 +179,18 @@ export class ShootingScene extends Phaser.Scene {
     this.boss = undefined;
 
     this.bullets.clear(true, true);
-    this.enemies.clear(true, true);
+    this.forEachEnemyGroup((group) => group.clear(true, true));
     this.enemyBullets.clear(true, true);
 
     if (this.player?.active) this.player.destroy();
     this.player = new Player(this, 130, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
     this.player.resetStats();
 
-    this.physics.add.overlap(this.bullets, this.enemies, this.hitEnemy, undefined, this);
+    this.forEachEnemyGroup((group) => {
+      this.physics.add.overlap(this.bullets, group, this.hitEnemy, undefined, this);
+      this.physics.add.overlap(group, this.player, this.hitPlayer, undefined, this);
+    });
     this.physics.add.overlap(this.enemyBullets, this.player, this.hitPlayer, undefined, this);
-    this.physics.add.overlap(this.enemies, this.player, this.hitPlayer, undefined, this);
 
     this.banner.setVisible(false);
     this.instruction.setVisible(false);
@@ -198,7 +211,7 @@ export class ShootingScene extends Phaser.Scene {
 
     // 残っている雑魚・弾を片付けてリザルト画面らしい見た目にする
     this.bullets.clear(true, true);
-    this.enemies.clear(true, true);
+    this.forEachEnemyGroup((group) => group.clear(true, true));
     this.enemyBullets.clear(true, true);
 
     const clearSeconds = (this.stageTime / 1000).toFixed(1);
@@ -216,7 +229,7 @@ export class ShootingScene extends Phaser.Scene {
     this.bossShotTimer = 0;
     this.fireTimer = 0;
     this.boss = undefined;
-    this.enemies.clear(true, true);
+    this.forEachEnemyGroup((group) => group.clear(true, true));
     this.enemyBullets.clear(true, true);
 
     this.banner.setVisible(false);
@@ -250,9 +263,10 @@ export class ShootingScene extends Phaser.Scene {
         const velocityX = fromLeft ? event.speed : -event.speed;
         const velocityY = event.vy ?? 0;
         const canShoot = event.type === 'shooter';
+        const shape = event.shape ?? 'triangle';
         EnemyFactory.create(
-          this, this.enemies, spawnX, event.y, event.type, velocityX, velocityY,
-          event.crossX, event.texture ?? 'enemy', canShoot, ShootingScene.SHOOT_DELAY_AFTER_ENTRY,
+          this, this.enemyGroups[shape], shape, spawnX, event.y, velocityX, velocityY,
+          event.crossX, canShoot, ShootingScene.SHOOT_DELAY_AFTER_ENTRY,
         );
       }
     }
@@ -265,19 +279,21 @@ export class ShootingScene extends Phaser.Scene {
       return true;
     });
 
-    this.enemies.children.each((child: Phaser.GameObjects.GameObject) => {
-      const enemy = child as Enemy;
-      if (!enemy.active) return true;
+    this.forEachEnemyGroup((group) => {
+      group.children.each((child: Phaser.GameObjects.GameObject) => {
+        const enemy = child as Enemy;
+        if (!enemy.active) return true;
 
-      if (enemy.pendingShot) {
-        enemy.pendingShot = false;
-        this.fireEnemyAimedShot(enemy.x, enemy.y);
-      }
+        if (enemy.pendingShot) {
+          enemy.pendingShot = false;
+          this.fireEnemyAimedShot(enemy.x, enemy.y);
+        }
 
-      if (enemy.x < -40 || enemy.x > GAME_CONFIG.WIDTH + 40 || enemy.y < -40 || enemy.y > GAME_CONFIG.PLAY_AREA.HEIGHT + 40) {
-        enemy.disableBody(true, true);
-      }
-      return true;
+        if (enemy.x < -40 || enemy.x > GAME_CONFIG.WIDTH + 40 || enemy.y < -40 || enemy.y > GAME_CONFIG.PLAY_AREA.HEIGHT + 40) {
+          enemy.disableBody(true, true);
+        }
+        return true;
+      });
     });
 
     this.enemyBullets.children.each((child: Phaser.GameObjects.GameObject) => {
@@ -320,7 +336,7 @@ export class ShootingScene extends Phaser.Scene {
   /** type:'shooter'の雑魚敵が出現した瞬間に、その場からプレイヤーへの角度で1発だけ自機狙い弾を撃つ。 */
   private fireEnemyAimedShot(x: number, y: number): void {
     const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
-    const bulletSpeed = 250;
+    const bulletSpeed = 350;
 
     let bullet = this.enemyBullets.getFirstDead(false) as Bullet;
     if (!bullet) {
@@ -331,12 +347,9 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private hitEnemy(object1: any, object2: any): void {
-    let bullet = object1;
-    let enemy = object2;
-    if (this.enemies.contains(object1)) {
-      enemy = object1;
-      bullet = object2;
-    }
+    // overlap(this.bullets, group, ...)で登録しているため、常にobject1=弾, object2=敵
+    const bullet = object1;
+    const enemy = object2;
     if (!bullet || !enemy || !bullet.active || !enemy.active) return;
     bullet.disableBody(true, true);
     enemy.disableBody(true, true);

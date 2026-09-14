@@ -1,7 +1,11 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
 
-export class Enemy extends Phaser.Physics.Arcade.Sprite {
+/**
+ * 全ての雑魚敵の基底クラス。移動（水平＋斜め交差）と自機狙い弾の発射タイミング管理を担当する。
+ * 見た目（テクスチャ）と当たり判定の形状は、形ごとのサブクラス（entities/enemies/配下）が用意する。
+ */
+export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   /** このX座標を通過したらvyを0にする境界。undefinedなら斜め移動の切り替えは行わない。 */
   private crossX?: number;
 
@@ -12,12 +16,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   /** trueになったらShootingScene側が発射処理を行い、falseに戻す。 */
   public pendingShot = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, texture = 'enemy') {
+  constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
     super(scene, x, y, texture);
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    (this.body as Phaser.Physics.Arcade.Body).setCircle(12, 5, 8);
+    this.setupHitbox();
   }
+
+  /** 見た目の形状に合わせた当たり判定を設定する（各サブクラスで実装） */
+  protected abstract setupHitbox(): void;
 
   /**
    * speedY・crossXを指定すると、crossXを通過するまで斜めに移動し、

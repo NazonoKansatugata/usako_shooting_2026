@@ -104,7 +104,7 @@
       "texture": "enemy"
     },
     {
-      "time": 5000,
+      "time": 6431,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -114,7 +114,7 @@
       "texture": "enemy"
     },
     {
-      "time": 5000,
+      "time": 6431,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -124,7 +124,7 @@
       "texture": "enemy"
     },
     {
-      "time": 5210,
+      "time": 6641,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -134,7 +134,7 @@
       "texture": "enemy"
     },
     {
-      "time": 5210,
+      "time": 6641,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -144,7 +144,7 @@
       "texture": "enemy"
     },
     {
-      "time": 5420,
+      "time": 6851,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -154,7 +154,7 @@
       "texture": "enemy"
     },
     {
-      "time": 5420,
+      "time": 6851,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -164,7 +164,7 @@
       "texture": "enemy"
     },
     {
-      "time": 5630,
+      "time": 7061,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -174,7 +174,7 @@
       "texture": "enemy"
     },
     {
-      "time": 5630,
+      "time": 7061,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -184,7 +184,7 @@
       "texture": "enemy"
     },
     {
-      "time": 5840,
+      "time": 7271,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -194,7 +194,7 @@
       "texture": "enemy"
     },
     {
-      "time": 5840,
+      "time": 7271,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -204,7 +204,7 @@
       "texture": "enemy"
     },
     {
-      "time": 9000,
+      "time": 11862,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -214,7 +214,7 @@
       "texture": "enemy"
     },
     {
-      "time": 9000,
+      "time": 11862,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -224,7 +224,7 @@
       "texture": "enemy"
     },
     {
-      "time": 9210,
+      "time": 12072,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -234,7 +234,7 @@
       "texture": "enemy"
     },
     {
-      "time": 9210,
+      "time": 12072,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -244,7 +244,7 @@
       "texture": "enemy"
     },
     {
-      "time": 9420,
+      "time": 12282,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -254,7 +254,7 @@
       "texture": "enemy"
     },
     {
-      "time": 9420,
+      "time": 12282,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -264,7 +264,7 @@
       "texture": "enemy"
     },
     {
-      "time": 9630,
+      "time": 12492,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -274,7 +274,7 @@
       "texture": "enemy"
     },
     {
-      "time": 9630,
+      "time": 12492,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -284,7 +284,7 @@
       "texture": "enemy"
     },
     {
-      "time": 9840,
+      "time": 12702,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -294,7 +294,7 @@
       "texture": "enemy"
     },
     {
-      "time": 9840,
+      "time": 12702,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -304,7 +304,7 @@
       "texture": "enemy"
     },
     {
-      "time": 13000,
+      "time": 17293,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -314,7 +314,7 @@
       "texture": "enemy"
     },
     {
-      "time": 13000,
+      "time": 17293,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -324,7 +324,7 @@
       "texture": "enemy"
     },
     {
-      "time": 13210,
+      "time": 17503,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -334,7 +334,7 @@
       "texture": "enemy"
     },
     {
-      "time": 13210,
+      "time": 17503,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -344,7 +344,7 @@
       "texture": "enemy"
     },
     {
-      "time": 13420,
+      "time": 17713,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -354,7 +354,7 @@
       "texture": "enemy"
     },
     {
-      "time": 13420,
+      "time": 17713,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -364,7 +364,7 @@
       "texture": "enemy"
     },
     {
-      "time": 13630,
+      "time": 17923,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -374,7 +374,7 @@
       "texture": "enemy"
     },
     {
-      "time": 13630,
+      "time": 17923,
       "type": "shooter",
       "y": 380,
       "speed": 150,
@@ -384,7 +384,7 @@
       "texture": "enemy"
     },
     {
-      "time": 13840,
+      "time": 18133,
       "type": "shooter",
       "y": 40,
       "speed": 150,
@@ -394,207 +394,7 @@
       "texture": "enemy"
     },
     {
-      "time": 13840,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 17000,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "right",
-      "vy": 100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 17000,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "right",
-      "vy": -100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 17210,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "right",
-      "vy": 100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 17210,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "right",
-      "vy": -100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 17420,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "right",
-      "vy": 100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 17420,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "right",
-      "vy": -100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 17630,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "right",
-      "vy": 100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 17630,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "right",
-      "vy": -100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 17840,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "right",
-      "vy": 100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 17840,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "right",
-      "vy": -100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 21000,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 21000,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 21210,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 21210,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 21420,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 21420,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 21630,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 21630,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 21840,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "texture": "enemy"
-    },
-    {
-      "time": 21840,
+      "time": 18133,
       "type": "shooter",
       "y": 380,
       "speed": 150,
