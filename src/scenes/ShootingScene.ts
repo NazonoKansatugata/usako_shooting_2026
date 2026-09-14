@@ -52,10 +52,12 @@ export class ShootingScene extends Phaser.Scene {
     this.load.image('player-base', 'assets/picture/player/DefineSprite_145/1.png');
     this.load.image('player-wing-1', 'assets/picture/player/DefineSprite_149/1.png');
     this.load.image('player-wing-3', 'assets/picture/player/DefineSprite_149/3.png');
+    this.load.image('player-hit', 'assets/picture/player/DefineSprite_168/90.png');
     this.load.audio('stage_bgm', 'assets/bgm/1226(ステージテーマ).mp3');
     this.load.audio('boss_bgm', 'assets/bgm/1283(ボス出現).mp3');
     this.load.audio('se_enemy_defeat', 'assets/se/311(敵撃破音).mp3');
     this.load.audio('se_player_hit', 'assets/se/153(被弾).mp3');
+    this.load.audio('se_player_game_over', 'assets/se/307(やられちゃった).mp3');
     this.load.audio('se_boss_alert', 'assets/se/1266(ボス出現アラート).mp3');
   }
 
@@ -389,7 +391,10 @@ export class ShootingScene extends Phaser.Scene {
     this.updateHud();
 
     if (dead) {
+      this.sound.play('se_player_game_over', { volume: 0.8 });
       this.finish('gameOver');
+    } else {
+      this.sound.play('se_player_hit', { volume: 0.6 });
     }
   }
 
@@ -400,6 +405,7 @@ export class ShootingScene extends Phaser.Scene {
     this.bullets.setVelocityX(0);
     this.enemyBullets.setVelocity(0, 0);
     this.dialogueWindow.hideDialogue();
+    if (mode === 'gameOver') this.player.startDeathAnimation();
     this.banner.setText(mode === 'clear' ? 'ALL STAGE CLEAR!' : 'GAME OVER').setVisible(true);
     this.instruction.setText('ENTER：もう一度プレイ　　ESC / T：タイトルへ戻る').setVisible(true);
   }
