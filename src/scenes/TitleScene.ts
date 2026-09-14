@@ -28,6 +28,14 @@ export class TitleScene extends Phaser.Scene {
   private flameBadgeY = 0;
   private isHardDifficulty = false;
 
+  private titleBgm?: Phaser.Sound.BaseSound;
+  private mainUiContainer!: Phaser.GameObjects.Container;
+  private shouldPlayIntro = true;
+  private isIntroPlaying = false;
+  private introLogo?: Phaser.GameObjects.Image;
+  private whiteOverlay?: Phaser.GameObjects.Graphics;
+  private introTweens: Phaser.Tweens.Tween[] = [];
+
   private modalContainer?: Phaser.GameObjects.Container;
   private modalOpen = false;
 
@@ -35,9 +43,15 @@ export class TitleScene extends Phaser.Scene {
     super('title');
   }
 
+  init(data?: { playIntro?: boolean }): void {
+    this.shouldPlayIntro = data?.playIntro ?? true;
+    this.isIntroPlaying = false;
+  }
+
   preload(): void {
     this.load.image('titleIcon', '/assets/picture/icon.png');
     this.load.image('titleLogo', '/assets/picture/title.png');
+    this.load.audio('titleBgm', '/assets/bgm/300_36-1514(オープニング).mp3');
     this.load.audio('titleSelect', '/assets/se/301(選択画面).mp3');
     this.load.audio('titleConfirm', '/assets/se/302(決定音).mp3');
   }
@@ -51,14 +65,111 @@ export class TitleScene extends Phaser.Scene {
     this.stars = [];
     this.flameParticles = [];
     this.flameTimer = 0;
+    this.introTweens = [];
 
     this.isHardDifficulty = SettingsManager.getInstance().difficulty === 'hard';
 
+    // BGMを5秒地点からループ再生
+    this.startTitleBgm();
+
     this.createBackgroundStars();
+
+    this.mainUiContainer = this.add.container(0, 0).setDepth(2);
     this.createTitleVisuals();
     this.createMenu();
     this.setupInput();
     this.updateSelection();
+
+    if (this.shouldPlayIntro) {
+      this.startIntroAnimation();
+    } else {
+      this.mainUiContainer.setAlpha(1);
+    }
+  }
+
+  private startTitleBgm(): void {
+    if (this.titleBgm && this.titleBgm.isPlaying) return;
+    this.titleBgm = this.sound.add('titleBgm', {
+      volume: SettingsManager.getInstance().bgmVolume / 100,
+      loop: true,
+    });
+    this.titleBgm.play({
+      seek: 0,
+    });
+  }
+
+  private startIntroAnimation(): void {
+    this.isIntroPlaying = true;
+    this.mainUiContainer.setAlpha(0);
+
+    // 画面上部から降下するタイトルロゴ（タイトル画面設置時：414x216 より大きい 660x345 で表示）
+    this.introLogo = this.add.image(GAME_CONFIG.WIDTH / 2, -200, 'titleLogo')
+      .setDisplaySize(660, 345)
+      .setDepth(15);
+
+    const dropTween = this.tweens.add({
+      targets: this.introLogo,
+      y: GAME_CONFIG.HEIGHT / 2,
+      duration: 4500,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.playWhiteoutTransition();
+      },
+    });
+    this.introTweens.push(dropTween);
+  }
+
+  private playWhiteoutTransition(): void {
+    this.whiteOverlay = this.add.graphics().setDepth(25);
+    this.whiteOverlay.fillStyle(0xffffff, 1);
+    this.whiteOverlay.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+    this.whiteOverlay.setAlpha(0);
+
+    const fadeToWhite = this.tweens.add({
+      targets: this.whiteOverlay,
+      alpha: 1,
+      duration: 250,
+      ease: 'Linear',
+      onComplete: () => {
+        if (this.introLogo) {
+          this.introLogo.destroy();
+          this.introLogo = undefined;
+        }
+        this.mainUiContainer.setAlpha(1);
+
+        const fadeFromWhite = this.tweens.add({
+          targets: this.whiteOverlay,
+          alpha: 0,
+          duration: 650,
+          ease: 'Sine.easeOut',
+          onComplete: () => {
+            if (this.whiteOverlay) {
+              this.whiteOverlay.destroy();
+              this.whiteOverlay = undefined;
+            }
+            this.isIntroPlaying = false;
+          },
+        });
+        this.introTweens.push(fadeFromWhite);
+      },
+    });
+    this.introTweens.push(fadeToWhite);
+  }
+
+  private skipIntroAnimation(): void {
+    if (!this.isIntroPlaying) return;
+    this.introTweens.forEach((t) => t.stop());
+    this.introTweens = [];
+    if (this.introLogo) {
+      this.introLogo.destroy();
+      this.introLogo = undefined;
+    }
+    if (this.whiteOverlay) {
+      this.whiteOverlay.destroy();
+      this.whiteOverlay = undefined;
+    }
+    this.mainUiContainer.setAlpha(1);
+    this.isIntroPlaying = false;
   }
 
   update(_time: number, delta: number): void {
@@ -97,12 +208,14 @@ export class TitleScene extends Phaser.Scene {
     this.titleIcon = this.add.image(726, 270, 'titleIcon')
       .setDisplaySize(438, 438)
       .setDepth(1);
+    this.mainUiContainer.add(this.titleIcon);
 
     const imageGlow = this.add.graphics().setDepth(-1);
     imageGlow.fillStyle(0x0755b8, 0.2);
     imageGlow.fillCircle(726, 270, 270);
     imageGlow.fillStyle(0x22d3ee, 0.08);
     imageGlow.fillCircle(726, 270, 315);
+    this.mainUiContainer.add(imageGlow);
 
     this.tweens.add({
       targets: this.titleIcon,
@@ -119,11 +232,13 @@ export class TitleScene extends Phaser.Scene {
     imageFrame.strokeCircle(726, 270, 225);
     imageFrame.lineStyle(2, 0xfacc15, 0.6);
     imageFrame.strokeCircle(726, 270, 238);
+    this.mainUiContainer.add(imageFrame);
 
     // タイトルと副題を含んだ完成ロゴ画像
     this.titleLogo = this.add.image(leftX, logoY, 'titleLogo')
       .setDisplaySize(414, 216)
       .setDepth(2);
+    this.mainUiContainer.add(this.titleLogo);
 
     this.tweens.add({
       targets: this.titleLogo,
@@ -161,6 +276,7 @@ export class TitleScene extends Phaser.Scene {
         fill: true,
       },
     }).setOrigin(0.5).setDepth(3);
+    this.mainUiContainer.add(hardText);
 
     // 激しく揺らめくアニメーション
     this.tweens.add({
@@ -188,6 +304,7 @@ export class TitleScene extends Phaser.Scene {
       (p as any).vy = Phaser.Math.FloatBetween(-0.8, -2.0);
       (p as any).vx = Phaser.Math.FloatBetween(-0.4, 0.4);
       (p as any).life = 1.0;
+      this.mainUiContainer.add(p);
       this.flameParticles.push(p);
     }
 
@@ -212,7 +329,10 @@ export class TitleScene extends Phaser.Scene {
       {
         text: 'ゲーム開始 (1P)',
         description: '一人でステージを攻略するメインモードを開始します。',
-        action: () => this.scene.start('shooting'),
+        action: () => {
+          this.titleBgm?.stop();
+          this.scene.start('shooting');
+        },
       },
       {
         text: '二人プレイ (2P)',
@@ -224,41 +344,56 @@ export class TitleScene extends Phaser.Scene {
         description: '基本操作、攻撃方法、ゲームルールや敵の説明を確認します。',
         action: () => this.showHowToPlayModal(),
       },
-      {        text: '記録 (Records)',
+      {
+        text: '記録 (Records)',
         description: 'ハイスコアやクリア状況などのプレイ記録を確認します。',
         action: () => this.showRecordsModal(),
       },
-      {        text: 'オプション (Options)',
+      {
+        text: 'オプション (Options)',
         description: '難易度、音量、キー設定、クレジットなどを変更・確認します。',
-        action: () => this.scene.start('option'),
+        action: () => {
+          this.titleBgm?.stop();
+          this.scene.start('option');
+        },
       },
     ];
 
     const startY = 245;
     const itemHeight = 42;
 
-    this.add.text(132, startY - 30, 'SELECT MENU', {
+    const selectMenuHeader = this.add.text(132, startY - 30, 'SELECT MENU', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '12px',
       color: '#22d3ee',
       letterSpacing: 2,
     }).setOrigin(0, 0.5);
+    this.mainUiContainer.add(selectMenuHeader);
 
     this.cursorIcon = this.add.text(104, startY, '▶', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '20px',
       color: '#f6d365',
     }).setOrigin(0.5);
+    this.mainUiContainer.add(this.cursorIcon);
 
     this.menuItems.forEach((item, index) => {
       const y = startY + index * itemHeight;
 
       const backplate = this.add.graphics().setDepth(1);
       this.menuBackplates.push(backplate);
+      this.mainUiContainer.add(backplate);
 
       const hitArea = this.add.zone(273, y, 302, 36).setDepth(1.5).setInteractive({ useHandCursor: true });
-      hitArea.on('pointerover', () => this.selectMenuItem(index));
+      hitArea.on('pointerover', () => {
+        if (this.isIntroPlaying) return;
+        this.selectMenuItem(index);
+      });
       hitArea.on('pointerdown', () => {
+        if (this.isIntroPlaying) {
+          this.skipIntroAnimation();
+          return;
+        }
         this.selectMenuItem(index);
         this.executeSelect();
       });
@@ -273,6 +408,7 @@ export class TitleScene extends Phaser.Scene {
       }).setOrigin(0, 0.5).setDepth(2);
 
       this.menuTexts.push(btn);
+      this.mainUiContainer.add(btn);
     });
 
     // 説明文表示
@@ -283,37 +419,73 @@ export class TitleScene extends Phaser.Scene {
       align: 'center',
       wordWrap: { width: 500 },
     }).setOrigin(0.5);
+    this.mainUiContainer.add(this.descText);
 
     // 操作ガイド
-    this.add.text(270, GAME_CONFIG.HEIGHT - 22, '↑↓ / WS：選択　　ENTER / SPACE / クリック：決定', {
+    const guideText = this.add.text(270, GAME_CONFIG.HEIGHT - 22, '↑↓ / WS：選択　　ENTER / SPACE / クリック：決定', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '13px',
       color: '#64748b',
     }).setOrigin(0.5);
+    this.mainUiContainer.add(guideText);
   }
 
   private setupInput(): void {
-    this.input.keyboard?.on('keydown-UP', () => this.navigate(-1));
-    this.input.keyboard?.on('keydown-W', () => this.navigate(-1));
-    this.input.keyboard?.on('keydown-DOWN', () => this.navigate(1));
-    this.input.keyboard?.on('keydown-S', () => this.navigate(1));
+    this.input.on('pointerdown', () => {
+      if (this.isIntroPlaying) {
+        this.skipIntroAnimation();
+      }
+    });
 
-    this.input.keyboard?.on('keydown-ENTER', () => this.executeSelect());
-    this.input.keyboard?.on('keydown-SPACE', () => this.executeSelect());
+    this.input.keyboard?.on('keydown-UP', () => {
+      if (this.isIntroPlaying) return;
+      this.navigate(-1);
+    });
+    this.input.keyboard?.on('keydown-W', () => {
+      if (this.isIntroPlaying) return;
+      this.navigate(-1);
+    });
+    this.input.keyboard?.on('keydown-DOWN', () => {
+      if (this.isIntroPlaying) return;
+      this.navigate(1);
+    });
+    this.input.keyboard?.on('keydown-S', () => {
+      if (this.isIntroPlaying) return;
+      this.navigate(1);
+    });
+
+    this.input.keyboard?.on('keydown-ENTER', () => {
+      if (this.isIntroPlaying) {
+        this.skipIntroAnimation();
+        return;
+      }
+      this.executeSelect();
+    });
+    this.input.keyboard?.on('keydown-SPACE', () => {
+      if (this.isIntroPlaying) {
+        this.skipIntroAnimation();
+        return;
+      }
+      this.executeSelect();
+    });
     this.input.keyboard?.on('keydown-ESC', () => {
+      if (this.isIntroPlaying) {
+        this.skipIntroAnimation();
+        return;
+      }
       if (this.modalOpen) this.closeModal();
     });
   }
 
   private navigate(delta: number): void {
-    if (this.modalOpen) return;
+    if (this.isIntroPlaying || this.modalOpen) return;
     this.selectedIndex = (this.selectedIndex + delta + this.menuItems.length) % this.menuItems.length;
     this.updateSelection();
     this.playSound('titleSelect');
   }
 
   private selectMenuItem(index: number): void {
-    if (this.modalOpen) return;
+    if (this.isIntroPlaying || this.modalOpen) return;
     if (this.selectedIndex === index) return;
 
     this.selectedIndex = index;
@@ -322,7 +494,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private executeSelect(): void {
-    if (this.modalOpen) return;
+    if (this.isIntroPlaying || this.modalOpen) return;
     this.playSound('titleConfirm');
     this.menuItems[this.selectedIndex].action();
   }
@@ -474,18 +646,10 @@ export class TitleScene extends Phaser.Scene {
     if (!this.backgroundGrid) this.backgroundGrid = this.add.graphics().setDepth(-2);
     this.backgroundGrid.clear();
     this.backgroundGrid.fillStyle(0x06143d, 1).fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
-    this.backgroundGrid.fillStyle(0x0a2866, 0.38).fillRect(500, 0, GAME_CONFIG.WIDTH - 500, GAME_CONFIG.HEIGHT);
-    this.backgroundGrid.fillStyle(0x03102f, 0.65).fillRect(0, 0, 500, GAME_CONFIG.HEIGHT);
-    this.backgroundGrid.lineStyle(1, 0x1c4a91, 0.25);
-    for (let x = -48 + this.backgroundOffset; x < GAME_CONFIG.WIDTH + 48; x += 48) {
-      this.backgroundGrid.lineBetween(x, 0, x, GAME_CONFIG.HEIGHT);
-    }
+    this.backgroundGrid.lineStyle(1, 0x1c4a91, 0.18);
+    // 横のグリッドラインのみ描画（縦線および左右の2色分割は削除）
     for (let y = 0; y < GAME_CONFIG.HEIGHT; y += 48) {
       this.backgroundGrid.lineBetween(0, y, GAME_CONFIG.WIDTH, y);
     }
-    this.backgroundGrid.lineStyle(2, 0x38bdf8, 0.28);
-    this.backgroundGrid.lineBetween(500, 38, 500, GAME_CONFIG.HEIGHT - 38);
-    this.backgroundGrid.lineStyle(1, 0xf6d365, 0.25);
-    this.backgroundGrid.lineBetween(524, GAME_CONFIG.HEIGHT - 42, GAME_CONFIG.WIDTH - 40, GAME_CONFIG.HEIGHT - 42);
   }
 }

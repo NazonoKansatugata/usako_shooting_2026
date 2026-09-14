@@ -22,11 +22,25 @@ export class OpeningScene extends Phaser.Scene {
   private activeSegment: OpeningSegmentId | null = null;
   private hasStarted = false;
   private musicStarted = false;
+  private isFullOpening = false;
+  private returnScene = 'title';
+  private isFromOption = false;
   private warningContainer?: Phaser.GameObjects.Container;
   private progressBar!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super('opening');
+  }
+
+  init(data?: { fullOpening?: boolean; returnScene?: string }): void {
+    this.isFullOpening = data?.fullOpening ?? GAME_CONFIG.ENABLE_STARTUP_FULL_OPENING;
+    this.returnScene = data?.returnScene ?? 'title';
+    this.isFromOption = !!data?.returnScene && data.returnScene !== 'title';
+    this.hasStarted = false;
+    this.musicStarted = false;
+    this.elapsed = 0;
+    this.preludeElapsed = 0;
+    this.activeSegment = null;
   }
 
   preload(): void {
@@ -50,7 +64,14 @@ export class OpeningScene extends Phaser.Scene {
     this.visualLayer = this.add.container(0, 0);
     this.createStars();
     this.createChrome();
-    this.createWarningModal();
+
+    if (this.isFromOption) {
+      // オプション・おまけからの再生時は警告なしで直接開始
+      this.beginOpening();
+    } else {
+      // 起動時は注意書きモーダルを表示
+      this.createWarningModal();
+    }
 
     this.input.on('pointerdown', () => this.handlePointerDown());
     this.input.keyboard?.on('keydown-ENTER', () => {
@@ -66,7 +87,14 @@ export class OpeningScene extends Phaser.Scene {
     if (!this.musicStarted) {
       this.preludeElapsed += delta / 1000;
       renderPreludeCut(this.getCutContext(), this.preludeElapsed, OPENING_TIMELINE.preludeDuration);
-      if (this.preludeElapsed >= OPENING_TIMELINE.preludeDuration) this.startMusic();
+      if (this.preludeElapsed >= OPENING_TIMELINE.preludeDuration) {
+        if (this.isFullOpening) {
+          this.startMusic();
+        } else {
+          // フルOP無効時（起動時）はシーン0完了でタイトル画面へ遷移
+          this.finishOpening();
+        }
+      }
       return;
     }
 
@@ -127,7 +155,9 @@ export class OpeningScene extends Phaser.Scene {
       this.warningContainer.destroy();
       this.warningContainer = undefined;
     }
-    this.scene.start('title');
+    this.scene.start(this.returnScene, {
+      playIntro: this.returnScene === 'title' && !this.isFromOption,
+    });
   }
 
   private createWarningModal(): void {
