@@ -30,6 +30,7 @@ export class ShootingScene extends Phaser.Scene {
   /** shooterタイプの雑魚敵が画面内に入ってから発射するまでの遅延(ms) */
   private static readonly SHOOT_DELAY_AFTER_ENTRY = 500;
   private static readonly BGM_LOOP_ADVANCE_SECONDS = 0.1;
+  private static readonly GAME_OVER_TRANSITION_DELAY = 3000;
   /** 雑魚敵の移動速度（ステージJSONのspeed/vy）に一律で掛ける倍率 */
   private static readonly SPEED_MULTIPLIER = 1.3;
 
@@ -118,6 +119,11 @@ export class ShootingScene extends Phaser.Scene {
   create(): void {
     // 物理ワールドの範囲をプレイエリア (960 x 420) に設定
     this.physics.world.setBounds(0, 0, GAME_CONFIG.PLAY_AREA.WIDTH, GAME_CONFIG.PLAY_AREA.HEIGHT);
+    // シーン遷移で破棄されたGraphicsへの参照を捨て、再挑戦時に背景レイヤーを作り直す
+    this.backgroundGraphics = undefined;
+    this.foregroundGraphics = undefined;
+    this.backgroundOffset = 0;
+    this.foregroundOffset = 0;
 
     this.createTextures();
     this.createPlayerAnimation();
@@ -617,7 +623,6 @@ export class ShootingScene extends Phaser.Scene {
     this.bullets.setVelocityX(0);
     this.enemyBullets.setVelocity(0, 0);
     this.dialogueWindow.hideDialogue();
-    if (mode === 'gameOver') this.player.startDeathAnimation();
 
     const difficulty = this.settingsManager.difficulty;
     if (mode === 'clear') {
@@ -626,7 +631,23 @@ export class ShootingScene extends Phaser.Scene {
     }
     const isNewHighScore = this.saveManager.reportScore(this.score);
 
-    this.banner.setText(mode === 'clear' ? 'ALL STAGE CLEAR!' : 'GAME OVER').setVisible(true);
+    if (mode === 'gameOver') {
+      this.hpText.setVisible(false);
+      this.scoreText.setVisible(false);
+      this.progressText.setVisible(false);
+      this.player.startDeathAnimation(() => {
+        this.time.delayedCall(ShootingScene.GAME_OVER_TRANSITION_DELAY, () => {
+          this.scene.start('gameOver', {
+            score: this.score,
+            highScore: this.saveManager.highScore,
+            isNewHighScore,
+          });
+        });
+      });
+      return;
+    }
+
+    this.banner.setText('ALL STAGE CLEAR!').setVisible(true);
     const highScoreLine = isNewHighScore ? '\n★ NEW HIGH SCORE ★' : `\nハイスコア：${this.saveManager.highScore}`;
     this.instruction.setText(
       `SCORE：${this.score}${highScoreLine}\n\nENTER：もう一度プレイ　　ESC / T：タイトルへ戻る`,
