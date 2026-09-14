@@ -6,6 +6,9 @@ export class TriangleEnemy extends Enemy {
   static readonly TEXTURE_KEY = 'enemyTriangle';
   static readonly TEXTURE_KEY_RED = 'enemyTriangleRed';
 
+  /** 動きはそのままに、移動速度だけ底上げする */
+  protected speedMultiplier = 1.5;
+
   static ensureTextures(scene: Phaser.Scene): void {
     if (scene.textures.exists(TriangleEnemy.TEXTURE_KEY)) return;
 

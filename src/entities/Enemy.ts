@@ -8,6 +8,10 @@ import { GAME_CONFIG } from '../config';
 export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   /** このX座標を通過したらvyを0にする境界。undefinedなら斜め移動の切り替えは行わない。 */
   private crossX?: number;
+  /** 形状ごとの移動速度倍率。サブクラスでオーバーライドする（例: 三角形を高速化）。 */
+  protected speedMultiplier = 1;
+  /** spawn()が呼ばれた時刻(ms)。形状ごとの時間依存の移動（波形移動など）に使う。 */
+  protected spawnTime = 0;
 
   private canShoot = false;
   private shootDelay = 0;
@@ -34,8 +38,9 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
    */
   public spawn(x: number, y: number, speedX = -120, speedY = 0, crossX?: number, canShoot = false, shootDelay = 0): void {
     this.enableBody(true, x, y, true, true);
-    this.setVelocity(speedX, speedY);
+    this.setVelocity(speedX * this.speedMultiplier, speedY * this.speedMultiplier);
     this.crossX = crossX;
+    this.spawnTime = this.scene.time.now;
     // テクスチャは左向きが正面のため、右向きに進む場合は反転させる
     this.setFlipX(speedX > 0);
 
@@ -50,14 +55,7 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     super.preUpdate(time, delta);
     if (!this.active) return;
 
-    if (this.crossX !== undefined) {
-      const vx = (this.body as Phaser.Physics.Arcade.Body).velocity.x;
-      const crossed = vx < 0 ? this.x <= this.crossX : this.x >= this.crossX;
-      if (crossed) {
-        this.setVelocityY(0);
-        this.crossX = undefined;
-      }
-    }
+    this.updateMovement(time, delta);
 
     if (this.canShoot) {
       if (!this.hasEnteredScreen) {
@@ -71,6 +69,21 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
           this.pendingShot = true;
           this.canShoot = false; // 1体につき1回だけ
         }
+      }
+    }
+  }
+
+  /**
+   * 毎フレームの移動処理。既定では斜め交差移動（crossX到達でvyを0にする）のみ。
+   * 形状ごとに違う動きをさせたいサブクラス（例: 丸の波形移動）はこれをオーバーライドする。
+   */
+  protected updateMovement(_time: number, _delta: number): void {
+    if (this.crossX !== undefined) {
+      const vx = (this.body as Phaser.Physics.Arcade.Body).velocity.x;
+      const crossed = vx < 0 ? this.x <= this.crossX : this.x >= this.crossX;
+      if (crossed) {
+        this.setVelocityY(0);
+        this.crossX = undefined;
       }
     }
   }

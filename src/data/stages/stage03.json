@@ -1,7 +1,7 @@
 {
   "id": "stage03",
   "name": "ステージ3",
-  "duration": 30000,
+  "duration": 50000,
   "spawnEvents": [
     {
       "time": 800,

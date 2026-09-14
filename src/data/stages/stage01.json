@@ -1,7 +1,7 @@
 {
   "id": "stage01",
   "name": "ステージ1",
-  "duration": 25000,
+  "duration": 50000,
   "spawnEvents": [
     {
       "time": 1000,
@@ -402,6 +402,62 @@
       "vy": -100,
       "crossX": 480,
       "texture": "enemy"
+    },
+    {
+      "time": 19200,
+      "type": "shooter",
+      "y": 100,
+      "speed": 130,
+      "from": "right",
+      "shape": "circle"
+    },
+    {
+      "time": 19600,
+      "type": "shooter",
+      "y": 210,
+      "speed": 130,
+      "from": "right",
+      "shape": "circle"
+    },
+    {
+      "time": 20000,
+      "type": "shooter",
+      "y": 320,
+      "speed": 130,
+      "from": "right",
+      "shape": "circle"
+    },
+    {
+      "time": 21000,
+      "type": "shooter",
+      "y": 150,
+      "speed": 140,
+      "from": "left",
+      "shape": "square"
+    },
+    {
+      "time": 21500,
+      "type": "shooter",
+      "y": 300,
+      "speed": 140,
+      "from": "left",
+      "shape": "square"
+    },
+    {
+      "time": 22600,
+      "type": "shooter",
+      "y": 120,
+      "speed": 120,
+      "from": "right",
+      "shape": "star"
+    },
+    {
+      "time": 23200,
+      "type": "shooter",
+      "y": 300,
+      "speed": 120,
+      "from": "right",
+      "shape": "star"
     }
   ],
   "boss": {

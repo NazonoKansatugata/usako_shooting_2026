@@ -21,4 +21,9 @@ export class SquareEnemy extends Enemy {
   protected setupHitbox(): void {
     (this.body as Phaser.Physics.Arcade.Body).setSize(16, 16).setOffset(8, 8);
   }
+
+  /** 斜め移動はせず、常に水平方向の直進のみ行う（ステージJSON側のvy/crossX指定は無視する）。 */
+  public override spawn(x: number, y: number, speedX = -120, _speedY = 0, _crossX?: number, canShoot = false, shootDelay = 0): void {
+    super.spawn(x, y, speedX, 0, undefined, canShoot, shootDelay);
+  }
 }
