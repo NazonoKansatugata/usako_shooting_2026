@@ -36,6 +36,7 @@ export class ShootingScene extends Phaser.Scene {
   private stageTime = 0;
   private bossShotTimer = 0;
   private fireTimer = 0;
+  private bossPreEventTriggered = false;
   private backgroundOffset = 0;
   private backgroundGrid?: Phaser.GameObjects.Graphics;
 
@@ -109,7 +110,11 @@ export class ShootingScene extends Phaser.Scene {
 
     if (this.mode !== 'playing') return;
 
-    this.stageTime += delta;
+    // イベント再生中（ステージ開始直後演出・イベント進捗率停止・ボス前演出）はステージ進行率の加算を止める
+    const progressBlocked = this.storyManager.isBlockingProgress();
+    if (!progressBlocked) {
+      this.stageTime += delta;
+    }
     this.bossShotTimer += delta;
     this.fireTimer -= delta;
 
@@ -117,10 +122,13 @@ export class ShootingScene extends Phaser.Scene {
     this.firePlayerBullet();
     this.updateEnemies();
     this.updateHud();
-    this.storyManager.update(this.stageTime, stageDuration);
+    if (!progressBlocked) {
+      this.storyManager.update(this.stageTime, stageDuration);
+    }
 
-    if (this.stageTime >= stageDuration && (!this.boss || !this.boss.active)) {
-      this.spawnBoss();
+    if (!progressBlocked && this.stageTime >= stageDuration && (!this.boss || !this.boss.active) && !this.bossPreEventTriggered) {
+      this.bossPreEventTriggered = true;
+      this.storyManager.triggerBossPreEvent(() => this.spawnBoss());
     }
     if (this.boss && this.boss.active && this.bossShotTimer > this.stageManager.current.boss.bulletInterval) {
       this.fireBossPattern();
@@ -173,6 +181,7 @@ export class ShootingScene extends Phaser.Scene {
     this.stageManager.reset();
     this.stageTime = 0;
     this.fireTimer = 0;
+    this.bossPreEventTriggered = false;
 
     if (this.boss?.active) this.boss.destroy();
     this.boss = undefined;
@@ -205,8 +214,9 @@ export class ShootingScene extends Phaser.Scene {
     this.stopBgm();
     if (this.player?.active) this.player.setVelocity(0, 0);
 
-    // 会話ウィンドウをクリア
+    // 会話ウィンドウをクリアしてからステージクリア後演出を再生する
     this.dialogueWindow.hideDialogue();
+    this.storyManager.triggerStageClearEvent();
 
     // 残っている雑魚・弾を片付けてリザルト画面らしい見た目にする
     this.bullets.clear(true, true);
@@ -227,6 +237,7 @@ export class ShootingScene extends Phaser.Scene {
     this.stageTime = 0;
     this.bossShotTimer = 0;
     this.fireTimer = 0;
+    this.bossPreEventTriggered = false;
     this.boss = undefined;
     this.enemies.clear(true, true);
     this.enemyBullets.clear(true, true);
@@ -370,11 +381,13 @@ export class ShootingScene extends Phaser.Scene {
       // takeDamage()内でactiveが即falseになりupdateHud()の分岐に乗らなくなるため、撃破時点のHPを明示的に0で反映する
       this.progressText.setText(`BOSS  0 / ${this.stageManager.current.boss.hp}`);
       const clearedStage = this.stageManager.stageNumber;
-      if (this.stageManager.advance()) {
-        this.enterStageClear(clearedStage);
-      } else {
-        this.finish('clear');
-      }
+      this.storyManager.triggerBossDefeatEvent(() => {
+        if (this.stageManager.advance()) {
+          this.enterStageClear(clearedStage);
+        } else {
+          this.finish('clear');
+        }
+      });
     }
   }
 
