@@ -111,6 +111,14 @@ export class ShootingScene extends Phaser.Scene {
       }
     });
 
+    // デバッグ用：1/2/3でステージ1/2/3の先頭へ、G/H/Jでそれぞれのボス戦へ直接ジャンプする
+    this.input.keyboard!.on('keydown-ONE', () => this.debugJumpToStage(0));
+    this.input.keyboard!.on('keydown-TWO', () => this.debugJumpToStage(1));
+    this.input.keyboard!.on('keydown-THREE', () => this.debugJumpToStage(2));
+    this.input.keyboard!.on('keydown-G', () => this.debugJumpToStage(0, true));
+    this.input.keyboard!.on('keydown-H', () => this.debugJumpToStage(1, true));
+    this.input.keyboard!.on('keydown-J', () => this.debugJumpToStage(2, true));
+
     this.events.once('shutdown', () => this.stopBgm());
   }
 
@@ -279,6 +287,45 @@ export class ShootingScene extends Phaser.Scene {
 
     this.storyManager.loadScenario(this.stageManager.current.id);
     this.playStageBgm();
+    this.updateHud();
+  }
+
+  /** デバッグ用：指定ステージ（0始まり）へ直接ジャンプする。toBoss=trueならそのステージのボス戦へ即座に突入する。 */
+  private debugJumpToStage(stageIndex: number, toBoss = false): void {
+    this.mode = 'playing';
+    this.stopBgm();
+    this.stageManager.jumpToStage(stageIndex);
+    this.stageTime = 0;
+    this.bossShotTimer = 0;
+    this.fireTimer = 0;
+    this.bossPreEventTriggered = false;
+
+    if (this.boss?.active) this.boss.destroy();
+    this.boss = undefined;
+
+    this.bullets.clear(true, true);
+    this.forEachEnemyGroup((group) => group.clear(true, true));
+    this.enemyBullets.clear(true, true);
+    this.enemyHomingBullets.clear(true, true);
+
+    this.player.resetStats();
+    this.player.setPosition(130, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
+
+    this.banner.setVisible(false);
+    this.instruction.setVisible(false);
+    this.hpText.setVisible(true);
+    this.progressText.setVisible(true);
+
+    if (toBoss) {
+      this.storyManager.reset();
+      this.stageManager.skipAllSpawnEvents();
+      this.stageTime = this.stageManager.current.duration;
+      this.bossPreEventTriggered = true;
+      this.spawnBoss();
+    } else {
+      this.storyManager.loadScenario(this.stageManager.current.id);
+      this.playStageBgm();
+    }
     this.updateHud();
   }
 
