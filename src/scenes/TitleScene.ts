@@ -14,6 +14,7 @@ export class TitleScene extends Phaser.Scene {
   private menuItems: MenuItem[] = [];
   private menuTexts: Phaser.GameObjects.Text[] = [];
   private menuBackplates: Phaser.GameObjects.Graphics[] = [];
+  private menuHitAreas: Phaser.GameObjects.Zone[] = [];
   private cursorIcon!: Phaser.GameObjects.Text;
   private descText!: Phaser.GameObjects.Text;
   private backgroundGrid?: Phaser.GameObjects.Graphics;
@@ -37,6 +38,8 @@ export class TitleScene extends Phaser.Scene {
   preload(): void {
     this.load.image('titleIcon', '/assets/picture/icon.png');
     this.load.image('titleLogo', '/assets/picture/title.png');
+    this.load.audio('titleSelect', '/assets/se/301(選択画面).mp3');
+    this.load.audio('titleConfirm', '/assets/se/302(決定音).mp3');
   }
 
   create(): void {
@@ -44,6 +47,7 @@ export class TitleScene extends Phaser.Scene {
     this.selectedIndex = 0;
     this.menuTexts = [];
     this.menuBackplates = [];
+    this.menuHitAreas = [];
     this.stars = [];
     this.flameParticles = [];
     this.flameTimer = 0;
@@ -252,28 +256,21 @@ export class TitleScene extends Phaser.Scene {
       const backplate = this.add.graphics().setDepth(1);
       this.menuBackplates.push(backplate);
 
+      const hitArea = this.add.zone(273, y, 302, 36).setDepth(1.5).setInteractive({ useHandCursor: true });
+      hitArea.on('pointerover', () => this.selectMenuItem(index));
+      hitArea.on('pointerdown', () => {
+        this.selectMenuItem(index);
+        this.executeSelect();
+      });
+      this.menuHitAreas.push(hitArea);
+
       const btn = this.add.text(132, y, item.text, {
         fontFamily: GAME_CONFIG.FONT_FAMILY,
         fontSize: '22px',
         color: '#e2e8f0',
         stroke: '#0f172a',
         strokeThickness: 4,
-      }).setOrigin(0, 0.5).setDepth(2).setInteractive({ useHandCursor: true });
-
-      btn.on('pointerover', () => {
-        if (!this.modalOpen) {
-          this.selectedIndex = index;
-          this.updateSelection();
-        }
-      });
-
-      btn.on('pointerdown', () => {
-        if (!this.modalOpen) {
-          this.selectedIndex = index;
-          this.updateSelection();
-          this.executeSelect();
-        }
-      });
+      }).setOrigin(0, 0.5).setDepth(2);
 
       this.menuTexts.push(btn);
     });
@@ -312,11 +309,26 @@ export class TitleScene extends Phaser.Scene {
     if (this.modalOpen) return;
     this.selectedIndex = (this.selectedIndex + delta + this.menuItems.length) % this.menuItems.length;
     this.updateSelection();
+    this.playSound('titleSelect');
+  }
+
+  private selectMenuItem(index: number): void {
+    if (this.modalOpen) return;
+    if (this.selectedIndex === index) return;
+
+    this.selectedIndex = index;
+    this.updateSelection();
+    this.playSound('titleSelect');
   }
 
   private executeSelect(): void {
     if (this.modalOpen) return;
+    this.playSound('titleConfirm');
     this.menuItems[this.selectedIndex].action();
+  }
+
+  private playSound(key: string): void {
+    this.sound.play(key, { volume: SettingsManager.getInstance().seVolume / 100 });
   }
 
   private updateSelection(): void {
