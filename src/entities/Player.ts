@@ -83,7 +83,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(vx, vy);
   }
 
-  public startDeathAnimation(): void {
+  public startDeathAnimation(onComplete?: () => void): void {
     if (this.isDying) return;
     this.isDying = true;
     this.setVelocity(0, 0);
@@ -113,6 +113,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       onComplete: () => {
         this.hitSprite.setVisible(false);
         this.setActive(false);
+        onComplete?.();
       },
     });
   }
