@@ -8,6 +8,7 @@ import { Enemy } from '../entities/Enemy';
 import { EnemyFactory } from '../managers/EnemyFactory';
 import { StageManager } from '../managers/StageManager';
 import { SettingsManager } from '../managers/SettingsManager';
+import { SaveManager } from '../managers/SaveManager';
 import { DialogueWindow } from '../ui/DialogueWindow';
 import { StoryManager } from '../managers/StoryManager';
 
@@ -16,6 +17,7 @@ const ENEMY_SHAPES: EnemyShape[] = ['triangle', 'circle', 'square', 'star'];
 export class ShootingScene extends Phaser.Scene {
   /** shooterタイプの雑魚敵が画面内に入ってから発射するまでの遅延(ms) */
   private static readonly SHOOT_DELAY_AFTER_ENTRY = 500;
+  private static readonly BGM_LOOP_ADVANCE_SECONDS = 0.1;
 
   private player!: Player;
   private bullets!: Phaser.Physics.Arcade.Group;
@@ -25,8 +27,12 @@ export class ShootingScene extends Phaser.Scene {
   private boss?: Boss;
   private stageManager = new StageManager();
   private settingsManager = SettingsManager.getInstance();
+  private saveManager = SaveManager.getInstance();
   private dialogueWindow!: DialogueWindow;
   private storyManager!: StoryManager;
+  private stageBgm?: Phaser.Sound.BaseSound;
+  private bossBgm?: Phaser.Sound.BaseSound;
+  private bgmLoopTimer?: Phaser.Time.TimerEvent;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -35,11 +41,16 @@ export class ShootingScene extends Phaser.Scene {
   private stageTime = 0;
   private bossShotTimer = 0;
   private fireTimer = 0;
+  private bossPreEventTriggered = false;
+  private score = 0;
+  private static readonly SCORE_ENEMY_DEFEAT = 100;
+  private static readonly SCORE_BOSS_DEFEAT = 3000;
   private backgroundOffset = 0;
   private backgroundGrid?: Phaser.GameObjects.Graphics;
 
   private hpText!: Phaser.GameObjects.Text;
   private progressText!: Phaser.GameObjects.Text;
+  private scoreText!: Phaser.GameObjects.Text;
   private banner!: Phaser.GameObjects.Text;
   private instruction!: Phaser.GameObjects.Text;
 
@@ -51,8 +62,12 @@ export class ShootingScene extends Phaser.Scene {
     this.load.image('player-base', 'assets/picture/player/DefineSprite_145/1.png');
     this.load.image('player-wing-1', 'assets/picture/player/DefineSprite_149/1.png');
     this.load.image('player-wing-3', 'assets/picture/player/DefineSprite_149/3.png');
+    this.load.image('player-hit', 'assets/picture/player/DefineSprite_168/90.png');
+    this.load.audio('stage_bgm', 'assets/bgm/1226(ステージテーマ).mp3');
+    this.load.audio('boss_bgm', 'assets/bgm/1283(ボス出現).mp3');
     this.load.audio('se_enemy_defeat', 'assets/se/311(敵撃破音).mp3');
     this.load.audio('se_player_hit', 'assets/se/153(被弾).mp3');
+    this.load.audio('se_player_game_over', 'assets/se/307(やられちゃった).mp3');
     this.load.audio('se_boss_alert', 'assets/se/1266(ボス出現アラート).mp3');
   }
 
@@ -90,6 +105,8 @@ export class ShootingScene extends Phaser.Scene {
         this.scene.start('title');
       }
     });
+
+    this.events.once('shutdown', () => this.stopBgm());
   }
 
   update(_time: number, delta: number): void {
@@ -102,7 +119,11 @@ export class ShootingScene extends Phaser.Scene {
 
     if (this.mode !== 'playing') return;
 
-    this.stageTime += delta;
+    // イベント再生中（ステージ開始直後演出・イベント進捗率停止・ボス前演出）はステージ進行率の加算を止める
+    const progressBlocked = this.storyManager.isBlockingProgress();
+    if (!progressBlocked) {
+      this.stageTime += delta;
+    }
     this.bossShotTimer += delta;
     this.fireTimer -= delta;
 
@@ -110,10 +131,13 @@ export class ShootingScene extends Phaser.Scene {
     this.firePlayerBullet();
     this.updateEnemies();
     this.updateHud();
-    this.storyManager.update(this.stageTime, stageDuration);
+    if (!progressBlocked) {
+      this.storyManager.update(this.stageTime, stageDuration);
+    }
 
-    if (this.stageTime >= stageDuration && (!this.boss || !this.boss.active)) {
-      this.spawnBoss();
+    if (!progressBlocked && this.stageTime >= stageDuration && (!this.boss || !this.boss.active) && !this.bossPreEventTriggered) {
+      this.bossPreEventTriggered = true;
+      this.storyManager.triggerBossPreEvent(() => this.spawnBoss());
     }
     if (this.boss && this.boss.active && this.bossShotTimer > this.stageManager.current.boss.bulletInterval) {
       this.fireBossPattern();
@@ -160,6 +184,7 @@ export class ShootingScene extends Phaser.Scene {
 
   private createHud(): void {
     this.hpText = this.add.text(24, 20, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '20px', color: '#f6d365' }).setDepth(5);
+    this.scoreText = this.add.text(24, 46, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '16px', color: '#f8f7f2' }).setDepth(5);
     this.progressText = this.add.text(GAME_CONFIG.WIDTH - 24, 20, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '18px', color: '#a9d6e5' }).setOrigin(1, 0).setDepth(5);
     this.banner = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 35, '', {
       fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '48px', color: '#f8f7f2', align: 'center', stroke: '#12263a', strokeThickness: 8,
@@ -174,6 +199,8 @@ export class ShootingScene extends Phaser.Scene {
     this.stageManager.reset();
     this.stageTime = 0;
     this.fireTimer = 0;
+    this.bossPreEventTriggered = false;
+    this.score = 0;
 
     if (this.boss?.active) this.boss.destroy();
     this.boss = undefined;
@@ -198,16 +225,19 @@ export class ShootingScene extends Phaser.Scene {
     this.progressText.setVisible(true);
 
     this.storyManager.loadScenario(this.stageManager.current.id);
+    this.playStageBgm();
     this.updateHud();
   }
 
   /** ボス撃破後、次ステージへ進む前にリザルトを表示してプレイヤーの入力を待つ。 */
   private enterStageClear(clearedStage: number): void {
     this.mode = 'stageClear';
+    this.stopBgm();
     if (this.player?.active) this.player.setVelocity(0, 0);
 
-    // 会話ウィンドウをクリア
+    // 会話ウィンドウをクリアしてからステージクリア後演出を再生する
     this.dialogueWindow.hideDialogue();
+    this.storyManager.triggerStageClearEvent();
 
     // 残っている雑魚・弾を片付けてリザルト画面らしい見た目にする
     this.bullets.clear(true, true);
@@ -216,6 +246,7 @@ export class ShootingScene extends Phaser.Scene {
 
     const clearSeconds = (this.stageTime / 1000).toFixed(1);
     const hp = Math.max(0, this.player.hp);
+    this.saveManager.reportStageCleared(clearedStage, this.settingsManager.difficulty);
 
     this.banner.setText(`STAGE ${clearedStage} CLEAR`).setVisible(true);
     this.instruction.setText(
@@ -228,6 +259,7 @@ export class ShootingScene extends Phaser.Scene {
     this.stageTime = 0;
     this.bossShotTimer = 0;
     this.fireTimer = 0;
+    this.bossPreEventTriggered = false;
     this.boss = undefined;
     this.forEachEnemyGroup((group) => group.clear(true, true));
     this.enemyBullets.clear(true, true);
@@ -236,6 +268,7 @@ export class ShootingScene extends Phaser.Scene {
     this.instruction.setVisible(false);
 
     this.storyManager.loadScenario(this.stageManager.current.id);
+    this.playStageBgm();
     this.updateHud();
   }
 
@@ -308,7 +341,12 @@ export class ShootingScene extends Phaser.Scene {
   private spawnBoss(): void {
     this.boss = new Boss(this, GAME_CONFIG.WIDTH - 100, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
     this.boss.spawn(GAME_CONFIG.WIDTH - 100, GAME_CONFIG.PLAY_AREA.HEIGHT / 2, this.stageManager.current.boss.hp);
-    this.sound.play('se_boss_alert', { volume: 0.7 });
+    this.stopBgm();
+    const alertSound = this.sound.add('se_boss_alert', { volume: 0.7 });
+    alertSound.once('complete', () => {
+      if (this.mode === 'playing' && this.boss?.active) this.playBossBgm();
+    });
+    alertSound.play();
 
     this.banner.setText('BOSS INCOMING').setVisible(true);
     this.time.delayedCall(1300, () => this.banner.setVisible(false));
@@ -354,6 +392,8 @@ export class ShootingScene extends Phaser.Scene {
     bullet.disableBody(true, true);
     enemy.disableBody(true, true);
     this.sound.play('se_enemy_defeat', { volume: 0.45 });
+    this.score += ShootingScene.SCORE_ENEMY_DEFEAT;
+    this.updateHud();
   }
 
   private hitBoss(object1: any, object2: any): void {
@@ -362,14 +402,18 @@ export class ShootingScene extends Phaser.Scene {
     bullet.disableBody(true, true);
     const defeated = this.boss.takeDamage(1);
     if (defeated) {
+      this.score += ShootingScene.SCORE_BOSS_DEFEAT;
       // takeDamage()内でactiveが即falseになりupdateHud()の分岐に乗らなくなるため、撃破時点のHPを明示的に0で反映する
       this.progressText.setText(`BOSS  0 / ${this.stageManager.current.boss.hp}`);
+      this.scoreText.setText(`SCORE  ${this.score}`);
       const clearedStage = this.stageManager.stageNumber;
-      if (this.stageManager.advance()) {
-        this.enterStageClear(clearedStage);
-      } else {
-        this.finish('clear');
-      }
+      this.storyManager.triggerBossDefeatEvent(() => {
+        if (this.stageManager.advance()) {
+          this.enterStageClear(clearedStage);
+        } else {
+          this.finish('clear');
+        }
+      });
     }
   }
 
@@ -386,23 +430,87 @@ export class ShootingScene extends Phaser.Scene {
     this.updateHud();
 
     if (dead) {
+      this.sound.play('se_player_game_over', { volume: 0.8 });
       this.finish('gameOver');
+    } else {
+      this.sound.play('se_player_hit', { volume: 0.6 });
     }
   }
 
   private finish(mode: 'clear' | 'gameOver'): void {
     this.mode = mode;
+    this.stopBgm();
     if (this.player?.active) this.player.setVelocity(0, 0);
     this.bullets.setVelocityX(0);
     this.enemyBullets.setVelocity(0, 0);
     this.dialogueWindow.hideDialogue();
+    if (mode === 'gameOver') this.player.startDeathAnimation();
+
+    const difficulty = this.settingsManager.difficulty;
+    if (mode === 'clear') {
+      this.saveManager.reportStageCleared(this.stageManager.stageNumber, difficulty);
+      this.saveManager.reportAllCleared(difficulty);
+    }
+    const isNewHighScore = this.saveManager.reportScore(this.score);
+
     this.banner.setText(mode === 'clear' ? 'ALL STAGE CLEAR!' : 'GAME OVER').setVisible(true);
-    this.instruction.setText('ENTER：もう一度プレイ　　ESC / T：タイトルへ戻る').setVisible(true);
+    const highScoreLine = isNewHighScore ? '\n★ NEW HIGH SCORE ★' : `\nハイスコア：${this.saveManager.highScore}`;
+    this.instruction.setText(
+      `SCORE：${this.score}${highScoreLine}\n\nENTER：もう一度プレイ　　ESC / T：タイトルへ戻る`,
+    ).setVisible(true);
+  }
+
+  private playStageBgm(): void {
+    this.stopBgm();
+    if (!this.stageBgm) this.stageBgm = this.createBgm('stage_bgm');
+    this.stageBgm.play();
+    this.scheduleBgmLoop(this.stageBgm, 'stage_bgm');
+  }
+
+  private playBossBgm(): void {
+    this.stopBgm();
+    if (!this.bossBgm) this.bossBgm = this.createBgm('boss_bgm');
+    this.bossBgm.play();
+    this.scheduleBgmLoop(this.bossBgm, 'boss_bgm');
+  }
+
+  private createBgm(key: string): Phaser.Sound.BaseSound {
+    return this.sound.add(key, {
+      loop: false,
+      volume: this.settingsManager.bgmVolume / 100,
+    });
+  }
+
+  private scheduleBgmLoop(sound: Phaser.Sound.BaseSound, key: string): void {
+    const audio = this.cache.audio.get(key) as { duration?: number } | undefined;
+    const duration = audio?.duration;
+    if (!duration || !Number.isFinite(duration) || duration <= ShootingScene.BGM_LOOP_ADVANCE_SECONDS) {
+      (sound as Phaser.Sound.WebAudioSound).setLoop(true);
+      return;
+    }
+
+    this.bgmLoopTimer = this.time.delayedCall(
+      (duration - ShootingScene.BGM_LOOP_ADVANCE_SECONDS) * 1000,
+      () => {
+        if (!sound.isPlaying) return;
+        sound.stop();
+        sound.play();
+        this.scheduleBgmLoop(sound, key);
+      },
+    );
+  }
+
+  private stopBgm(): void {
+    this.bgmLoopTimer?.remove(false);
+    this.bgmLoopTimer = undefined;
+    this.stageBgm?.stop();
+    this.bossBgm?.stop();
   }
 
   private updateHud(): void {
     const hp = this.player ? Math.max(0, this.player.hp) : GAME_CONFIG.PLAYER_HP;
     this.hpText.setText(`HP  ${'●'.repeat(hp)}${'○'.repeat(GAME_CONFIG.PLAYER_HP - hp)}`);
+    this.scoreText.setText(`SCORE  ${this.score}`);
 
     if (this.boss && this.boss.active) {
       this.progressText.setText(`BOSS  ${this.boss.hp} / ${this.stageManager.current.boss.hp}`);

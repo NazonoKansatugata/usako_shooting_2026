@@ -3,9 +3,22 @@ export type Difficulty = 'normal' | 'hard';
 /** 雑魚敵の見た目・当たり判定の形状。src/entities/enemies/配下の各クラスに対応する。 */
 export type EnemyShape = 'triangle' | 'circle' | 'square' | 'star';
 
+/**
+ * ダイアログの発火タイミング種別
+ * - progress: 従来通りステージ進行率(triggerPercent)で発火。進行率の停止は行わない
+ * - event: ステージ進行率(triggerPercent)で発火。表示中は進行率の進行を停止する（イベント進捗率停止機能）
+ * - stageStart: ステージ開始直後に発火（進行率の進行を停止する）
+ * - bossPre: ボス出現直前に発火。表示が終わるまでボスの出現を遅らせる
+ * - bossDefeat: ボス撃破直後、ステージクリア処理に進む前に発火
+ * - stageClear: ステージクリア画面表示時に発火
+ */
+export type DialogueTriggerType = 'progress' | 'event' | 'stageStart' | 'bossPre' | 'bossDefeat' | 'stageClear';
+
 export interface DialogueItem {
   id: string;
-  triggerPercent: number; // 0 ~ 100 (ステージ進行率)
+  triggerType?: DialogueTriggerType; // 省略時は'progress'
+  triggerPercent?: number; // 0 ~ 100 (ステージ進行率)。triggerType='progress'|'event'で使用
+  eventId?: string; // 同じeventIdを持つ項目は1つのイベントとして連続再生される（triggerType='event'で使用、省略時はtriggerPercent単位でグルーピング）
   speaker: string; // 話者名 (例: "うさこ")
   text: string; // 本文
   portrait?: string; // 立ち絵・アイコンキー (将来用)

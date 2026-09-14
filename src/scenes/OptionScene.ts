@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
 import { SettingsManager, Difficulty } from '../managers/SettingsManager';
+import { SaveManager } from '../managers/SaveManager';
 
 type OptionItemKey =
   | 'difficulty'
@@ -24,6 +25,7 @@ interface OptionItem {
 
 export class OptionScene extends Phaser.Scene {
   private settingsManager = SettingsManager.getInstance();
+  private saveManager = SaveManager.getInstance();
   private selectedIndex = 0;
   private menuTexts: Phaser.GameObjects.Text[] = [];
   private valueTexts: Phaser.GameObjects.Text[] = [];
@@ -140,7 +142,7 @@ export class OptionScene extends Phaser.Scene {
       {
         key: 'reset',
         label: 'データ削除 (リセット)',
-        description: 'すべての設定を初期状態（デフォルト）に戻します。',
+        description: 'ハイスコア・クリア状況・設定などすべての保存データを消去します。',
         getValueText: () => '▶ 実行',
         onSelect: () => {
           this.showResetConfirmModal();
@@ -378,7 +380,7 @@ export class OptionScene extends Phaser.Scene {
     box.strokeRoundedRect(GAME_CONFIG.WIDTH / 2 - 220, GAME_CONFIG.HEIGHT / 2 - 100, 440, 200, 12);
     container.add(box);
 
-    const title = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 60, '設定の初期化', {
+    const title = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 60, 'セーブデータの削除', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '22px',
       color: '#ef4444',
@@ -387,7 +389,7 @@ export class OptionScene extends Phaser.Scene {
     }).setOrigin(0.5);
     container.add(title);
 
-    const msg = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 20, 'すべての設定をデフォルトに戻しますか？\n(難易度や音量設定が初期化されます)', {
+    const msg = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT / 2 - 20, 'ハイスコア・クリア状況・設定など\nすべての保存データを削除しますか？(元に戻せません)', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '15px',
       color: '#e2e8f0',
@@ -409,6 +411,7 @@ export class OptionScene extends Phaser.Scene {
 
     btnReset.on('pointerdown', () => {
       this.settingsManager.resetToDefault();
+      this.saveManager.clearAll();
       this.refreshValues();
       this.closeModal();
     });
