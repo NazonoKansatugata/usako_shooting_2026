@@ -1,6 +1,7 @@
 import stage01 from '../data/stages/stage01.json';
 import stage02 from '../data/stages/stage02.json';
 import stage03 from '../data/stages/stage03.json';
+import { EnemyShape } from '../types';
 
 export interface BossConfig {
   hp: number;
@@ -16,7 +17,8 @@ export interface SpawnEvent {
   from?: 'left' | 'right'; // 出現する画面端。省略時は'right'（右から左へ）
   vy?: number; // 垂直方向の速度（正で下、負で上）。省略時は0（水平移動のみ）
   crossX?: number; // このX座標を通過した瞬間にvyを0にして水平移動へ切り替える
-  texture?: string; // 見た目のテクスチャキー。省略時は'enemy'（通常色）
+  texture?: string; // レガシー項目（現在は未使用。shapeで見た目のクラスを選ぶ）
+  shape?: EnemyShape; // 敵の形状。省略時は'triangle'
 }
 
 export interface StageData {

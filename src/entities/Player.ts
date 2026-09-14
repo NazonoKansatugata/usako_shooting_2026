@@ -3,6 +3,8 @@ import { GAME_CONFIG } from '../config';
 import { SettingsManager } from '../managers/SettingsManager';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
+  /** プレイヤー画像全体（本体・羽・砲）の拡大率 */
+  private static readonly SCALE = 1.4;
   private static readonly HIT_IMAGE_OFFSET_X = 0;
   private static readonly HIT_IMAGE_OFFSET_Y = -30;
 
@@ -17,25 +19,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, 'player-base');
     scene.add.existing(this);
     scene.physics.add.existing(this);
+    this.setScale(Player.SCALE);
 
-    this.wingSprite = scene.add.sprite(x, y - 2, 'player-wing-1');
+    this.wingSprite = scene.add.sprite(x, y - 2 * Player.SCALE, 'player-wing-1').setScale(Player.SCALE);
     this.wingSprite.play('player-flight');
-    this.airCannon = scene.add.sprite(x + 15, y + 4, 'player-air-cannon');
+    this.airCannon = scene.add.sprite(x + 15 * Player.SCALE, y + 4 * Player.SCALE, 'player-air-cannon').setScale(Player.SCALE);
     this.hitSprite = scene.add.sprite(x, y, 'player-hit');
     this.hitSprite.setVisible(false);
 
     this.setCollideWorldBounds(true);
-    // 喰らい判定を中央の小さな円（半径8px, オフセット10, 10）に設定
-    (this.body as Phaser.Physics.Arcade.Body).setCircle(8, 10, 10);
+    // player-base画像(31x43px)のシルエットに大まかに合わせた長方形（幅20px×高さ30px、オフセット6, 8）
+    // setScale()を先に呼んでいるため、拡大率(SCALE)は自動的に反映される
+    (this.body as Phaser.Physics.Arcade.Body).setSize(20, 30).setOffset(6, 8);
   }
 
   public preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
-    this.wingSprite.setPosition(this.x, this.y - 3);
+    this.wingSprite.setPosition(this.x, this.y - 3 * Player.SCALE);
     this.wingSprite.setRotation(this.rotation);
     this.wingSprite.setAlpha(this.alpha);
     this.wingSprite.setVisible(this.visible);
-    this.airCannon.setPosition(this.x + 15, this.y +4 );
+    this.airCannon.setPosition(this.x + 15 * Player.SCALE, this.y + 4 * Player.SCALE);
     this.airCannon.setRotation(this.rotation);
     this.airCannon.setAlpha(this.alpha);
     this.airCannon.setVisible(this.visible);
