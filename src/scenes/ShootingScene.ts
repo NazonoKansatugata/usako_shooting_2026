@@ -19,6 +19,13 @@ import { StoryManager } from '../managers/StoryManager';
 
 const ENEMY_SHAPES: EnemyShape[] = ['triangle', 'circle', 'square', 'star'];
 
+interface CloudFlow {
+  x: number;
+  y: number;
+  scale: number;
+  alpha: number;
+}
+
 export class ShootingScene extends Phaser.Scene {
   /** shooterタイプの雑魚敵が画面内に入ってから発射するまでの遅延(ms) */
   private static readonly SHOOT_DELAY_AFTER_ENTRY = 500;
@@ -57,7 +64,30 @@ export class ShootingScene extends Phaser.Scene {
   private static readonly SCORE_ENEMY_DEFEAT = 100;
   private static readonly SCORE_BOSS_DEFEAT = 3000;
   private backgroundOffset = 0;
-  private backgroundGrid?: Phaser.GameObjects.Graphics;
+  private foregroundOffset = 0;
+  private backgroundGraphics?: Phaser.GameObjects.Graphics;
+  private foregroundGraphics?: Phaser.GameObjects.Graphics;
+  private readonly skyClouds: CloudFlow[] = [
+    { x: 140, y: 76, scale: 0.52, alpha: 0.48 },
+    { x: 760, y: 286, scale: 0.78, alpha: 0.62 },
+    { x: 1380, y: 154, scale: 0.4, alpha: 0.42 },
+    { x: 2110, y: 335, scale: 0.62, alpha: 0.58 },
+    { x: 2740, y: 98, scale: 0.7, alpha: 0.5 },
+  ];
+  private readonly nightClouds: CloudFlow[] = [
+    { x: 330, y: 88, scale: 0.42, alpha: 0.2 },
+    { x: 1010, y: 230, scale: 0.66, alpha: 0.26 },
+    { x: 1850, y: 58, scale: 0.5, alpha: 0.18 },
+    { x: 2590, y: 180, scale: 0.72, alpha: 0.24 },
+  ];
+  private readonly skyForegroundClouds: CloudFlow[] = [
+    { x: 780, y: 130, scale: 1.25, alpha: 0.7 },
+    { x: 3160, y: 295, scale: 1.05, alpha: 0.66 },
+  ];
+  private readonly nightForegroundClouds: CloudFlow[] = [
+    { x: 1120, y: 105, scale: 1.3, alpha: 0.32 },
+    { x: 3540, y: 288, scale: 1.1, alpha: 0.3 },
+  ];
 
   private hpText!: Phaser.GameObjects.Text;
   private progressText!: Phaser.GameObjects.Text;
@@ -664,15 +694,102 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private drawBackground(delta: number): void {
-    this.backgroundOffset = (this.backgroundOffset + delta * 0.04) % 48;
-    this.cameras.main.setBackgroundColor('#12263a');
-    if (!this.backgroundGrid) this.backgroundGrid = this.add.graphics().setDepth(-1);
-    this.backgroundGrid.clear().lineStyle(1, 0x1f4058, 0.7);
-    for (let x = -48 + this.backgroundOffset; x < GAME_CONFIG.WIDTH + 48; x += 48) {
-      this.backgroundGrid.lineBetween(x, 0, x, GAME_CONFIG.PLAY_AREA.HEIGHT);
+    this.backgroundOffset = (this.backgroundOffset + delta * 0.035) % 3600;
+    this.foregroundOffset = (this.foregroundOffset + delta * 0.15) % 4800;
+    if (!this.backgroundGraphics) this.backgroundGraphics = this.add.graphics().setDepth(-1);
+    if (!this.foregroundGraphics) this.foregroundGraphics = this.add.graphics().setDepth(2);
+
+    const background = this.backgroundGraphics.clear();
+    const foreground = this.foregroundGraphics.clear();
+    const stage = this.stageManager.stageNumber;
+
+    if (stage === 1) {
+      this.drawSkyBackground(background, foreground);
+    } else if (stage === 2) {
+      this.drawTimeTravelBackground(background, foreground);
+    } else {
+      this.drawNightCityBackground(background, foreground);
     }
-    for (let y = 0; y <= GAME_CONFIG.PLAY_AREA.HEIGHT; y += 48) {
-      this.backgroundGrid.lineBetween(0, y, GAME_CONFIG.WIDTH, y);
+  }
+
+  private drawSkyBackground(background: Phaser.GameObjects.Graphics, foreground: Phaser.GameObjects.Graphics): void {
+    this.cameras.main.setBackgroundColor('#67c5e8');
+    background.fillStyle(0x67c5e8).fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.PLAY_AREA.HEIGHT);
+    background.fillStyle(0xd8f4ff, 0.5).fillCircle(760, 72, 48).fillCircle(790, 72, 35);
+
+    const mountainOffset = this.backgroundOffset * 0.28;
+    for (let x = -360 - mountainOffset; x < GAME_CONFIG.WIDTH + 360; x += 360) {
+      background.fillStyle(0x4d9a87).fillTriangle(x, 420, x + 175, 165, x + 350, 420);
+      background.fillStyle(0x34796f).fillTriangle(x + 155, 420, x + 310, 230, x + 490, 420);
+      background.fillStyle(0x8fcf93).fillTriangle(x + 175, 165, x + 204, 210, x + 147, 210);
     }
+
+    this.drawCloudFlow(background, this.skyClouds, this.backgroundOffset * 0.55);
+    this.drawCloudFlow(foreground, this.skyForegroundClouds, this.foregroundOffset);
+  }
+
+  private drawTimeTravelBackground(background: Phaser.GameObjects.Graphics, foreground: Phaser.GameObjects.Graphics): void {
+    this.cameras.main.setBackgroundColor('#f3b4c5');
+    background.fillStyle(0xf3b4c5).fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.PLAY_AREA.HEIGHT);
+    const ringX = 700 - this.backgroundOffset * 0.12;
+    background.lineStyle(8, 0x9c7cc5, 0.48).strokeCircle(ringX, 205, 180);
+    background.lineStyle(4, 0xf08b45, 0.62).strokeCircle(ringX, 205, 135);
+    background.fillStyle(0x304867, 0.9).fillCircle(ringX, 205, 112);
+    background.lineStyle(5, 0xfff2d8, 0.95).strokeCircle(ringX, 205, 98);
+    for (let tick = 0; tick < 12; tick++) {
+      const angle = Phaser.Math.DegToRad(tick * 30 - 90);
+      background.lineStyle(3, 0xfff2d8, 0.86).lineBetween(
+        ringX + Math.cos(angle) * 79, 205 + Math.sin(angle) * 79,
+        ringX + Math.cos(angle) * 91, 205 + Math.sin(angle) * 91,
+      );
+    }
+    background.lineStyle(6, 0xffbc42, 0.95).lineBetween(ringX, 205, ringX + 38, 205 - 50);
+    background.lineStyle(4, 0x76c9c5, 0.95).lineBetween(ringX, 205, ringX - 52, 205 + 20);
+
+    for (let x = -120 - this.backgroundOffset; x < GAME_CONFIG.WIDTH + 180; x += 180) {
+      background.fillStyle(0x6baeb5, 0.38).fillRect(x, 55 + ((x / 180) % 3) * 90, 58, 3);
+      background.fillStyle(0xf18c45, 0.4).fillRect(x + 62, 270 - ((x / 180) % 2) * 110, 34, 3);
+    }
+    for (const shard of [{ x: 1180, y: 65 }, { x: 3690, y: 225 }]) {
+      const x = this.flowX(shard.x, this.foregroundOffset);
+      foreground.fillStyle(0xe4d5fa, 0.42).fillTriangle(x, shard.y, x + 95, shard.y + 135, x + 12, shard.y + 260);
+      foreground.fillStyle(0x76c9c5, 0.35).fillRect(x + 70, 0, 7, 420);
+    }
+  }
+
+  private drawNightCityBackground(background: Phaser.GameObjects.Graphics, foreground: Phaser.GameObjects.Graphics): void {
+    this.cameras.main.setBackgroundColor('#101b46');
+    background.fillStyle(0x101b46).fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.PLAY_AREA.HEIGHT);
+    for (let star = 0; star < 38; star++) {
+      const x = (star * 83) % GAME_CONFIG.WIDTH;
+      const y = 18 + (star * 47) % 245;
+      background.fillStyle(star % 4 === 0 ? 0xf6d365 : 0xdbe9ff, 0.45 + (star % 3) * 0.18).fillCircle(x, y, star % 5 === 0 ? 2 : 1);
+    }
+    this.drawCloudFlow(background, this.nightClouds, this.backgroundOffset * 0.35);
+
+    const cityOffset = this.backgroundOffset * 0.5;
+    for (let x = -100 - cityOffset; x < GAME_CONFIG.WIDTH + 120; x += 100) {
+      const height = 90 + (Math.floor((x + cityOffset) / 100) % 3 + 3) * 32;
+      background.fillStyle(0x17243f).fillRect(x, 420 - height, 78, height);
+      background.fillStyle(0xffd56b, 0.58);
+      for (let windowY = 420 - height + 18; windowY < 405; windowY += 28) {
+        background.fillRect(x + 15, windowY, 8, 10).fillRect(x + 48, windowY, 8, 10);
+      }
+    }
+    this.drawCloudFlow(foreground, this.nightForegroundClouds, this.foregroundOffset);
+  }
+
+  private drawCloudFlow(graphics: Phaser.GameObjects.Graphics, clouds: CloudFlow[], offset: number): void {
+    for (const cloud of clouds) {
+      const x = this.flowX(cloud.x, offset);
+      graphics.fillStyle(0xffffff, cloud.alpha).fillEllipse(x + 72 * cloud.scale, cloud.y, 145 * cloud.scale, 44 * cloud.scale);
+      graphics.fillCircle(x + 30 * cloud.scale, cloud.y + 4 * cloud.scale, 28 * cloud.scale)
+        .fillCircle(x + 70 * cloud.scale, cloud.y - 18 * cloud.scale, 38 * cloud.scale)
+        .fillCircle(x + 108 * cloud.scale, cloud.y, 31 * cloud.scale);
+    }
+  }
+
+  private flowX(baseX: number, offset: number): number {
+    return ((baseX - offset + 220) % 4800 + 4800) % 4800 - 220;
   }
 }
