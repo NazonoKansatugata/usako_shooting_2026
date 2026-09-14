@@ -13,9 +13,12 @@ export class TitleScene extends Phaser.Scene {
   private selectedIndex = 0;
   private menuItems: MenuItem[] = [];
   private menuTexts: Phaser.GameObjects.Text[] = [];
+  private menuBackplates: Phaser.GameObjects.Graphics[] = [];
   private cursorIcon!: Phaser.GameObjects.Text;
   private descText!: Phaser.GameObjects.Text;
   private backgroundGrid?: Phaser.GameObjects.Graphics;
+  private titleIcon?: Phaser.GameObjects.Image;
+  private titleLogo?: Phaser.GameObjects.Image;
   private backgroundOffset = 0;
   private stars: Phaser.GameObjects.Arc[] = [];
   private flameParticles: Phaser.GameObjects.Arc[] = [];
@@ -31,10 +34,16 @@ export class TitleScene extends Phaser.Scene {
     super('title');
   }
 
+  preload(): void {
+    this.load.image('titleIcon', '/assets/picture/icon.png');
+    this.load.image('titleLogo', '/assets/picture/title.png');
+  }
+
   create(): void {
     this.modalOpen = false;
     this.selectedIndex = 0;
     this.menuTexts = [];
+    this.menuBackplates = [];
     this.stars = [];
     this.flameParticles = [];
     this.flameTimer = 0;
@@ -78,58 +87,53 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private createTitleVisuals(): void {
-    // タイトルロゴ装飾
-    const logoY = 120;
+    const leftX = 270;
+    const logoY = 115;
 
-    // サブタイトル
-    this.add.text(GAME_CONFIG.WIDTH / 2, logoY - 48, '★ 2D横スクロール会話型シューティング ★', {
-      fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '15px',
-      color: '#38bdf8',
-      stroke: '#0f172a',
-      strokeThickness: 3,
-    }).setOrigin(0.5);
+    this.titleIcon = this.add.image(726, 270, 'titleIcon')
+      .setDisplaySize(438, 438)
+      .setDepth(1);
 
-    // メインタイトル
-    const title = this.add.text(GAME_CONFIG.WIDTH / 2, logoY, '新・うさこシューティング', {
-      fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '46px',
-      color: '#f8f7f2',
-      align: 'center',
-      stroke: '#12263a',
-      strokeThickness: 8,
-    }).setOrigin(0.5);
+    const imageGlow = this.add.graphics().setDepth(-1);
+    imageGlow.fillStyle(0x0755b8, 0.2);
+    imageGlow.fillCircle(726, 270, 270);
+    imageGlow.fillStyle(0x22d3ee, 0.08);
+    imageGlow.fillCircle(726, 270, 315);
 
-    // タイトルの微かな浮遊アニメーション
     this.tweens.add({
-      targets: title,
-      y: logoY + 5,
-      duration: 1800,
+      targets: this.titleIcon,
+      y: 264,
+      angle: { from: -1.5, to: 1.5 },
+      duration: 2600,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
 
-    // 年号バッジ (タイトル右上の独立した位置に配置し被りを解消)
-    this.add.text(GAME_CONFIG.WIDTH / 2 + 300, logoY - 28, '2026', {
-      fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '16px',
-      color: '#f6d365',
-      backgroundColor: '#1e293b',
-      padding: { x: 8, y: 3 },
-    }).setOrigin(0.5);
+    const imageFrame = this.add.graphics().setDepth(0);
+    imageFrame.lineStyle(3, 0x22d3ee, 0.65);
+    imageFrame.strokeCircle(726, 270, 225);
+    imageFrame.lineStyle(2, 0xfacc15, 0.6);
+    imageFrame.strokeCircle(726, 270, 238);
+
+    // タイトルと副題を含んだ完成ロゴ画像
+    this.titleLogo = this.add.image(leftX, logoY, 'titleLogo')
+      .setDisplaySize(414, 216)
+      .setDepth(2);
+
+    this.tweens.add({
+      targets: this.titleLogo,
+      y: logoY + 4,
+      duration: 2200,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
 
     // 難易度「難」設定時の燃える「難!」表示
     if (this.isHardDifficulty) {
-      this.createFlameHardBadge(GAME_CONFIG.WIDTH / 2 + 335, logoY + 12);
+      this.createFlameHardBadge(leftX + 190, logoY + 56);
     }
-
-    // キャッチコピー
-    this.add.text(GAME_CONFIG.WIDTH / 2, logoY + 45, '~タイムスリップ!? うさこvs身内ノリ集団!!!~', {
-      fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '16px',
-      color: '#a9d6e5',
-    }).setOrigin(0.5);
   }
 
   private createFlameHardBadge(x: number, y: number): void {
@@ -226,10 +230,17 @@ export class TitleScene extends Phaser.Scene {
       },
     ];
 
-    const startY = 240;
-    const itemHeight = 44;
+    const startY = 245;
+    const itemHeight = 42;
 
-    this.cursorIcon = this.add.text(GAME_CONFIG.WIDTH / 2 - 150, startY, '▶', {
+    this.add.text(132, startY - 30, 'SELECT MENU', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '12px',
+      color: '#22d3ee',
+      letterSpacing: 2,
+    }).setOrigin(0, 0.5);
+
+    this.cursorIcon = this.add.text(104, startY, '▶', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '20px',
       color: '#f6d365',
@@ -238,13 +249,16 @@ export class TitleScene extends Phaser.Scene {
     this.menuItems.forEach((item, index) => {
       const y = startY + index * itemHeight;
 
-      const btn = this.add.text(GAME_CONFIG.WIDTH / 2, y, item.text, {
+      const backplate = this.add.graphics().setDepth(1);
+      this.menuBackplates.push(backplate);
+
+      const btn = this.add.text(132, y, item.text, {
         fontFamily: GAME_CONFIG.FONT_FAMILY,
         fontSize: '22px',
         color: '#e2e8f0',
         stroke: '#0f172a',
         strokeThickness: 4,
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      }).setOrigin(0, 0.5).setDepth(2).setInteractive({ useHandCursor: true });
 
       btn.on('pointerover', () => {
         if (!this.modalOpen) {
@@ -265,15 +279,16 @@ export class TitleScene extends Phaser.Scene {
     });
 
     // 説明文表示
-    this.descText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - 70, '', {
+    this.descText = this.add.text(270, GAME_CONFIG.HEIGHT - 62, '', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '15px',
+      fontSize: '13px',
       color: '#94a3b8',
       align: 'center',
+      wordWrap: { width: 500 },
     }).setOrigin(0.5);
 
     // 操作ガイド
-    this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - 25, '↑↓ / WS：選択　　ENTER / SPACE / クリック：決定', {
+    this.add.text(270, GAME_CONFIG.HEIGHT - 22, '↑↓ / WS：選択　　ENTER / SPACE / クリック：決定', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '13px',
       color: '#64748b',
@@ -305,8 +320,8 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private updateSelection(): void {
-    const startY = 240;
-    const itemHeight = 44;
+    const startY = 245;
+    const itemHeight = 42;
     const targetY = startY + this.selectedIndex * itemHeight;
 
     this.cursorIcon.setY(targetY);
@@ -314,8 +329,18 @@ export class TitleScene extends Phaser.Scene {
     this.menuTexts.forEach((text, i) => {
       if (i === this.selectedIndex) {
         text.setColor('#f6d365').setFontSize(24).setStyle({ fontStyle: 'bold' });
+        this.menuBackplates[i].clear();
+        this.menuBackplates[i].fillStyle(0x0d4fa6, 0.9);
+        this.menuBackplates[i].fillRoundedRect(122, startY + i * itemHeight - 18, 302, 36, 8);
+        this.menuBackplates[i].lineStyle(2, 0xfacc15, 0.9);
+        this.menuBackplates[i].strokeRoundedRect(122, startY + i * itemHeight - 18, 302, 36, 8);
       } else {
         text.setColor('#cbd5e1').setFontSize(22).setStyle({ fontStyle: 'normal' });
+        this.menuBackplates[i].clear();
+        this.menuBackplates[i].fillStyle(0x061a4a, 0.5);
+        this.menuBackplates[i].fillRoundedRect(122, startY + i * itemHeight - 18, 302, 36, 8);
+        this.menuBackplates[i].lineStyle(1, 0x1e55b7, 0.4);
+        this.menuBackplates[i].strokeRoundedRect(122, startY + i * itemHeight - 18, 302, 36, 8);
       }
     });
 
@@ -433,14 +458,22 @@ export class TitleScene extends Phaser.Scene {
 
   private drawBackground(delta: number): void {
     this.backgroundOffset = (this.backgroundOffset + delta * 0.03) % 48;
-    this.cameras.main.setBackgroundColor('#10192e');
+    this.cameras.main.setBackgroundColor('#06143d');
     if (!this.backgroundGrid) this.backgroundGrid = this.add.graphics().setDepth(-2);
-    this.backgroundGrid.clear().lineStyle(1, 0x1e293b, 0.6);
+    this.backgroundGrid.clear();
+    this.backgroundGrid.fillStyle(0x06143d, 1).fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+    this.backgroundGrid.fillStyle(0x0a2866, 0.38).fillRect(500, 0, GAME_CONFIG.WIDTH - 500, GAME_CONFIG.HEIGHT);
+    this.backgroundGrid.fillStyle(0x03102f, 0.65).fillRect(0, 0, 500, GAME_CONFIG.HEIGHT);
+    this.backgroundGrid.lineStyle(1, 0x1c4a91, 0.25);
     for (let x = -48 + this.backgroundOffset; x < GAME_CONFIG.WIDTH + 48; x += 48) {
       this.backgroundGrid.lineBetween(x, 0, x, GAME_CONFIG.HEIGHT);
     }
     for (let y = 0; y < GAME_CONFIG.HEIGHT; y += 48) {
       this.backgroundGrid.lineBetween(0, y, GAME_CONFIG.WIDTH, y);
     }
+    this.backgroundGrid.lineStyle(2, 0x38bdf8, 0.28);
+    this.backgroundGrid.lineBetween(500, 38, 500, GAME_CONFIG.HEIGHT - 38);
+    this.backgroundGrid.lineStyle(1, 0xf6d365, 0.25);
+    this.backgroundGrid.lineBetween(524, GAME_CONFIG.HEIGHT - 42, GAME_CONFIG.WIDTH - 40, GAME_CONFIG.HEIGHT - 42);
   }
 }
