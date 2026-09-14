@@ -33,6 +33,6 @@ export function renderPrelude(context: OpeningCutContext, seconds: number, durat
 
   const dedicationFadeIn = Phaser.Math.Clamp((seconds - 4.95) / 0.8, 0, 1);
   const dedicationFadeOut = Phaser.Math.Clamp((duration - seconds) / 1.5, 0, 1);
-  const dedication = context.addText('この作品を うさこ原作者\nシンヒガシ氏・yuko氏に捧ぐ', 480, 270, 19, '#f4f4f4');
+  const dedication = context.addText('スペシャルさんくす うさこ原作者\nシンヒガシ氏・yuko氏', 480, 270, 19, '#f4f4f4');
   dedication.setAlpha(dedicationFadeIn * dedicationFadeOut);
 }

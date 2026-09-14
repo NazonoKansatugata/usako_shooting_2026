@@ -36,30 +36,39 @@ export function renderMoon(context: OpeningCutContext, _elapsed: number): void {
   context.scene.tweens.add({
     targets: moonGroup,
     y: 205,
-    scale: 1.55,
+    scale: 3,
     duration: 1750,
-    ease: 'Quad.easeIn',
+    ease: 'Cubic.easeIn',
   });
 
-  // 画面端に巨大配置。胸元より下は画面外に残し、驚きで体だけが縦に伸びる。
-  const usako = context.scene.add.image(80, 700, 'opening_usako_scene3_5')
-    .setDisplaySize(1100, 1375).setOrigin(0.5, 0.5).setAngle(12).setDepth(2);
-  const nekoko = context.scene.add.image(880, 700, 'opening_nekoko_scene3_5')
-    .setDisplaySize(950, 1267).setOrigin(0.5, 0.5).setAngle(-12).setDepth(2);
+  // 画面端に配置し、胸元より下は画面外に残したまま、驚きで全身をがたがた震わせる。
+  // 元画像が小さいため、scene2と同じ表示サイズに留めて拡大によるぼやけを抑える。
+  const usako = context.scene.add.image(120, 390, 'opening_usako_scene3_5')
+    .setDisplaySize(300, 375).setOrigin(0.5, 0.5).setAngle(12).setDepth(2);
+  const nekoko = context.scene.add.image(840, 390, 'opening_nekoko_scene3_5')
+    .setDisplaySize(260, 347).setOrigin(0.5, 0.5).setAngle(-12).setDepth(2);
   context.layer.add([usako, nekoko]);
 
-  usako.setScale(1.35, 0.05);
-  nekoko.setScale(1.35, 0.05);
+  const usakoBaseX = usako.x;
+  const nekokoBaseX = nekoko.x;
   context.scene.tweens.add({
     targets: usako,
-    scaleY: 1.35,
-    duration: 950,
-    ease: 'Back.easeOut',
+    x: { from: usakoBaseX - 14, to: usakoBaseX + 14 },
+    y: { from: 374, to: 406 },
+    angle: { from: 4, to: 20 },
+    duration: 28,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut',
   });
   context.scene.tweens.add({
     targets: nekoko,
-    scaleY: 1.35,
-    duration: 950,
-    ease: 'Back.easeOut',
+    x: { from: nekokoBaseX - 14, to: nekokoBaseX + 14 },
+    y: { from: 374, to: 406 },
+    angle: { from: -20, to: -4 },
+    duration: 50,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut',
   });
 }
