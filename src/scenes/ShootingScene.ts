@@ -14,6 +14,7 @@ import { StoryManager } from '../managers/StoryManager';
 export class ShootingScene extends Phaser.Scene {
   /** shooterタイプの雑魚敵が画面内に入ってから発射するまでの遅延(ms) */
   private static readonly SHOOT_DELAY_AFTER_ENTRY = 500;
+  private static readonly BGM_LOOP_ADVANCE_SECONDS = 0.1;
 
   private player!: Player;
   private bullets!: Phaser.Physics.Arcade.Group;
@@ -24,6 +25,9 @@ export class ShootingScene extends Phaser.Scene {
   private settingsManager = SettingsManager.getInstance();
   private dialogueWindow!: DialogueWindow;
   private storyManager!: StoryManager;
+  private stageBgm?: Phaser.Sound.BaseSound;
+  private bossBgm?: Phaser.Sound.BaseSound;
+  private bgmLoopTimer?: Phaser.Time.TimerEvent;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -48,6 +52,8 @@ export class ShootingScene extends Phaser.Scene {
     this.load.image('player-base', 'assets/picture/player/DefineSprite_145/1.png');
     this.load.image('player-wing-1', 'assets/picture/player/DefineSprite_149/1.png');
     this.load.image('player-wing-3', 'assets/picture/player/DefineSprite_149/3.png');
+    this.load.audio('stage_bgm', 'assets/bgm/1226(ステージテーマ).mp3');
+    this.load.audio('boss_bgm', 'assets/bgm/1283(ボス出現).mp3');
     this.load.audio('se_enemy_defeat', 'assets/se/311(敵撃破音).mp3');
     this.load.audio('se_player_hit', 'assets/se/153(被弾).mp3');
     this.load.audio('se_boss_alert', 'assets/se/1266(ボス出現アラート).mp3');
@@ -87,6 +93,8 @@ export class ShootingScene extends Phaser.Scene {
         this.scene.start('title');
       }
     });
+
+    this.events.once('shutdown', () => this.stopBgm());
   }
 
   update(_time: number, delta: number): void {
@@ -185,12 +193,14 @@ export class ShootingScene extends Phaser.Scene {
     this.progressText.setVisible(true);
 
     this.storyManager.loadScenario(this.stageManager.current.id);
+    this.playStageBgm();
     this.updateHud();
   }
 
   /** ボス撃破後、次ステージへ進む前にリザルトを表示してプレイヤーの入力を待つ。 */
   private enterStageClear(clearedStage: number): void {
     this.mode = 'stageClear';
+    this.stopBgm();
     if (this.player?.active) this.player.setVelocity(0, 0);
 
     // 会話ウィンドウをクリア
@@ -223,6 +233,7 @@ export class ShootingScene extends Phaser.Scene {
     this.instruction.setVisible(false);
 
     this.storyManager.loadScenario(this.stageManager.current.id);
+    this.playStageBgm();
     this.updateHud();
   }
 
@@ -292,7 +303,12 @@ export class ShootingScene extends Phaser.Scene {
   private spawnBoss(): void {
     this.boss = new Boss(this, GAME_CONFIG.WIDTH - 100, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
     this.boss.spawn(GAME_CONFIG.WIDTH - 100, GAME_CONFIG.PLAY_AREA.HEIGHT / 2, this.stageManager.current.boss.hp);
-    this.sound.play('se_boss_alert', { volume: 0.7 });
+    this.stopBgm();
+    const alertSound = this.sound.add('se_boss_alert', { volume: 0.7 });
+    alertSound.once('complete', () => {
+      if (this.mode === 'playing' && this.boss?.active) this.playBossBgm();
+    });
+    alertSound.play();
 
     this.banner.setText('BOSS INCOMING').setVisible(true);
     this.time.delayedCall(1300, () => this.banner.setVisible(false));
@@ -379,12 +395,60 @@ export class ShootingScene extends Phaser.Scene {
 
   private finish(mode: 'clear' | 'gameOver'): void {
     this.mode = mode;
+    this.stopBgm();
     if (this.player?.active) this.player.setVelocity(0, 0);
     this.bullets.setVelocityX(0);
     this.enemyBullets.setVelocity(0, 0);
     this.dialogueWindow.hideDialogue();
     this.banner.setText(mode === 'clear' ? 'ALL STAGE CLEAR!' : 'GAME OVER').setVisible(true);
     this.instruction.setText('ENTER：もう一度プレイ　　ESC / T：タイトルへ戻る').setVisible(true);
+  }
+
+  private playStageBgm(): void {
+    this.stopBgm();
+    if (!this.stageBgm) this.stageBgm = this.createBgm('stage_bgm');
+    this.stageBgm.play();
+    this.scheduleBgmLoop(this.stageBgm, 'stage_bgm');
+  }
+
+  private playBossBgm(): void {
+    this.stopBgm();
+    if (!this.bossBgm) this.bossBgm = this.createBgm('boss_bgm');
+    this.bossBgm.play();
+    this.scheduleBgmLoop(this.bossBgm, 'boss_bgm');
+  }
+
+  private createBgm(key: string): Phaser.Sound.BaseSound {
+    return this.sound.add(key, {
+      loop: false,
+      volume: this.settingsManager.bgmVolume / 100,
+    });
+  }
+
+  private scheduleBgmLoop(sound: Phaser.Sound.BaseSound, key: string): void {
+    const audio = this.cache.audio.get(key) as { duration?: number } | undefined;
+    const duration = audio?.duration;
+    if (!duration || !Number.isFinite(duration) || duration <= ShootingScene.BGM_LOOP_ADVANCE_SECONDS) {
+      (sound as Phaser.Sound.WebAudioSound).setLoop(true);
+      return;
+    }
+
+    this.bgmLoopTimer = this.time.delayedCall(
+      (duration - ShootingScene.BGM_LOOP_ADVANCE_SECONDS) * 1000,
+      () => {
+        if (!sound.isPlaying) return;
+        sound.stop();
+        sound.play();
+        this.scheduleBgmLoop(sound, key);
+      },
+    );
+  }
+
+  private stopBgm(): void {
+    this.bgmLoopTimer?.remove(false);
+    this.bgmLoopTimer = undefined;
+    this.stageBgm?.stop();
+    this.bossBgm?.stop();
   }
 
   private updateHud(): void {
