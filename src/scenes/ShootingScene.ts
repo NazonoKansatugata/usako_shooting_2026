@@ -4,6 +4,7 @@ import { GameMode } from '../types';
 import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
 import { Bullet } from '../entities/Bullet';
+import { Enemy } from '../entities/Enemy';
 import { EnemyFactory } from '../managers/EnemyFactory';
 import { StageManager } from '../managers/StageManager';
 import { SettingsManager } from '../managers/SettingsManager';
@@ -11,6 +12,9 @@ import { DialogueWindow } from '../ui/DialogueWindow';
 import { StoryManager } from '../managers/StoryManager';
 
 export class ShootingScene extends Phaser.Scene {
+  /** shooterタイプの雑魚敵が画面内に入ってから発射するまでの遅延(ms) */
+  private static readonly SHOOT_DELAY_AFTER_ENTRY = 500;
+
   private player!: Player;
   private bullets!: Phaser.Physics.Arcade.Group;
   private enemies!: Phaser.Physics.Arcade.Group;
@@ -115,6 +119,7 @@ export class ShootingScene extends Phaser.Scene {
     const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.fillStyle(0xf6d365).fillCircle(18, 18, 16).generateTexture('player', 36, 36);
     graphics.clear().fillStyle(0xff6b6b).fillTriangle(0, 20, 34, 0, 34, 40).generateTexture('enemy', 34, 40);
+    graphics.clear().fillStyle(0xdc2626).fillTriangle(0, 20, 34, 0, 34, 40).generateTexture('enemyRed', 34, 40);
     graphics.clear().fillStyle(0xffc857).fillCircle(10, 10, 10).generateTexture('bullet', 20, 20);
     graphics.clear().fillStyle(0xff4d6d).fillCircle(8, 8, 8).generateTexture('enemyBullet', 16, 16);
     graphics.clear().fillStyle(0xc44569).fillRect(0, 0, 116, 76).generateTexture('boss', 116, 76);
@@ -229,7 +234,11 @@ export class ShootingScene extends Phaser.Scene {
         const spawnX = fromLeft ? -30 : GAME_CONFIG.WIDTH + 30;
         const velocityX = fromLeft ? event.speed : -event.speed;
         const velocityY = event.vy ?? 0;
-        EnemyFactory.create(this, this.enemies, spawnX, event.y, event.type, velocityX, velocityY, event.crossX);
+        const canShoot = event.type === 'shooter';
+        EnemyFactory.create(
+          this, this.enemies, spawnX, event.y, event.type, velocityX, velocityY,
+          event.crossX, event.texture ?? 'enemy', canShoot, ShootingScene.SHOOT_DELAY_AFTER_ENTRY,
+        );
       }
     }
 
@@ -242,9 +251,16 @@ export class ShootingScene extends Phaser.Scene {
     });
 
     this.enemies.children.each((child: Phaser.GameObjects.GameObject) => {
-      const sprite = child as Phaser.Physics.Arcade.Sprite;
-      if (sprite.active && (sprite.x < -40 || sprite.x > GAME_CONFIG.WIDTH + 40 || sprite.y < -40 || sprite.y > GAME_CONFIG.PLAY_AREA.HEIGHT + 40)) {
-        sprite.disableBody(true, true);
+      const enemy = child as Enemy;
+      if (!enemy.active) return true;
+
+      if (enemy.pendingShot) {
+        enemy.pendingShot = false;
+        this.fireEnemyAimedShot(enemy.x, enemy.y);
+      }
+
+      if (enemy.x < -40 || enemy.x > GAME_CONFIG.WIDTH + 40 || enemy.y < -40 || enemy.y > GAME_CONFIG.PLAY_AREA.HEIGHT + 40) {
+        enemy.disableBody(true, true);
       }
       return true;
     });
@@ -284,6 +300,19 @@ export class ShootingScene extends Phaser.Scene {
     }
     const bulletSpeed = this.stageManager.current.boss.bulletSpeed;
     bullet.fire(bx, by, Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed);
+  }
+
+  /** type:'shooter'の雑魚敵が出現した瞬間に、その場からプレイヤーへの角度で1発だけ自機狙い弾を撃つ。 */
+  private fireEnemyAimedShot(x: number, y: number): void {
+    const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
+    const bulletSpeed = 250;
+
+    let bullet = this.enemyBullets.getFirstDead(false) as Bullet;
+    if (!bullet) {
+      bullet = new Bullet(this, x, y, 'enemyBullet');
+      this.enemyBullets.add(bullet);
+    }
+    bullet.fire(x, y, Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed);
   }
 
   private hitEnemy(object1: any, object2: any): void {
