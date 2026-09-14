@@ -21,6 +21,7 @@ export class DialogueWindow extends Phaser.GameObjects.Container {
   private portraitImage?: Phaser.GameObjects.Image;
   private currentVoice?: Phaser.Sound.BaseSound;
   private hideTimerEvent?: Phaser.Time.TimerEvent;
+  private onDialogueComplete?: () => void;
 
   // アニメーション用変数
   private animTime = 0;
@@ -226,8 +227,9 @@ export class DialogueWindow extends Phaser.GameObjects.Container {
 
   /**
    * 対話アイテムを表示する
+   * @param onComplete 表示時間が経過し自然にクローズした時に呼ばれるコールバック（イベント連続再生の進行制御に使用）
    */
-  public showDialogue(item: DialogueItem): void {
+  public showDialogue(item: DialogueItem, onComplete?: () => void): void {
     if (this.hideTimerEvent) {
       this.hideTimerEvent.remove(false);
       this.hideTimerEvent = undefined;
@@ -235,6 +237,7 @@ export class DialogueWindow extends Phaser.GameObjects.Container {
     if (this.currentVoice && this.currentVoice.isPlaying) {
       this.currentVoice.stop();
     }
+    this.onDialogueComplete = onComplete;
 
     // 会話メッセージオーバーレイ背景の描画
     const area = GAME_CONFIG.DIALOG_AREA;
@@ -292,11 +295,25 @@ export class DialogueWindow extends Phaser.GameObjects.Container {
 
     const duration = item.duration ?? 4000;
     this.hideTimerEvent = this.scene.time.delayedCall(duration, () => {
-      this.hideDialogue();
+      this.completeDialogue();
     });
   }
 
+  /** 表示時間経過による自然な終了。登録されたコールバックを実行してから非表示にする */
+  private completeDialogue(): void {
+    const callback = this.onDialogueComplete;
+    this.onDialogueComplete = undefined;
+    this.hideDialogueVisual();
+    callback?.();
+  }
+
+  /** 外部からの強制中断用。コールバックは発火させない（シーンリセット等での使用を想定） */
   public hideDialogue(): void {
+    this.onDialogueComplete = undefined;
+    this.hideDialogueVisual();
+  }
+
+  private hideDialogueVisual(): void {
     if (this.hideTimerEvent) {
       this.hideTimerEvent.remove(false);
       this.hideTimerEvent = undefined;
