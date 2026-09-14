@@ -56,6 +56,8 @@ export class StoryManager {
 
   // 現在イベント系ダイアログ（進行率を止めるべきもの）を再生中かどうか
   private blocking = false;
+  // 通常の進行率連動ダイアログは、表示完了後に次の項目を再生する
+  private progressDialoguePlaying = false;
 
   constructor(dialogueWindow: DialogueWindow) {
     this.dialogueWindow = dialogueWindow;
@@ -73,6 +75,7 @@ export class StoryManager {
     this.bossPreDialogues = [];
     this.bossDefeatDialogues = [];
     this.stageClearDialogues = [];
+    this.progressDialoguePlaying = false;
 
     const scenario = SCENARIO_MAP[stageId];
     if (!scenario || !scenario.dialogues || scenario.dialogues.length === 0) return;
@@ -134,6 +137,9 @@ export class StoryManager {
 
     const progressPercent = Math.min(100, (stageTime / totalDuration) * 100);
 
+    // 通常会話を最後まで表示してから、次のイベント判定へ進む
+    if (this.progressDialoguePlaying) return;
+
     // イベント進捗率停止：該当%に到達したら再生し、完了するまで進行率を止める
     for (const group of this.eventGroups) {
       if (!group.triggered && progressPercent >= group.triggerPercent) {
@@ -150,8 +156,11 @@ export class StoryManager {
     for (const entry of this.progressDialogues) {
       if (!entry.triggered && progressPercent >= (entry.item.triggerPercent ?? 0)) {
         entry.triggered = true;
-        this.dialogueWindow.showDialogue(entry.item);
-        break; // 1つのフレームで同時に複数出ないように1つずつ処理
+        this.progressDialoguePlaying = true;
+        this.dialogueWindow.showDialogue(entry.item, () => {
+          this.progressDialoguePlaying = false;
+        });
+        break; // 表示完了後、次回のupdateで次の未発火項目を再生する
       }
     }
   }
@@ -201,5 +210,6 @@ export class StoryManager {
     this.bossPreDialogues = [];
     this.bossDefeatDialogues = [];
     this.stageClearDialogues = [];
+    this.progressDialoguePlaying = false;
   }
 }
