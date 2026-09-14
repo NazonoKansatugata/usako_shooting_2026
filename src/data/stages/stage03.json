@@ -2,9 +2,266 @@
   "id": "stage03",
   "name": "ステージ3",
   "duration": 30000,
-  "spawnInterval": 650,
-  "speedMultiplier": 1.3,
-  "enemyPool": ["basic", "fast", "fast"],
+  "spawnEvents": [
+    {
+      "time": 800,
+      "type": "basic",
+      "y": 60,
+      "speed": 140
+    },
+    {
+      "time": 1450,
+      "type": "fast",
+      "y": 150,
+      "speed": 270
+    },
+    {
+      "time": 2100,
+      "type": "fast",
+      "y": 240,
+      "speed": 290
+    },
+    {
+      "time": 2750,
+      "type": "basic",
+      "y": 330,
+      "speed": 160
+    },
+    {
+      "time": 3400,
+      "type": "fast",
+      "y": 240,
+      "speed": 240
+    },
+    {
+      "time": 4050,
+      "type": "fast",
+      "y": 60,
+      "speed": 270
+    },
+    {
+      "time": 4700,
+      "type": "basic",
+      "y": 150,
+      "speed": 190
+    },
+    {
+      "time": 5350,
+      "type": "fast",
+      "y": 240,
+      "speed": 260
+    },
+    {
+      "time": 6000,
+      "type": "fast",
+      "y": 330,
+      "speed": 240
+    },
+    {
+      "time": 6650,
+      "type": "basic",
+      "y": 240,
+      "speed": 170
+    },
+    {
+      "time": 7300,
+      "type": "fast",
+      "y": 60,
+      "speed": 290
+    },
+    {
+      "time": 7950,
+      "type": "fast",
+      "y": 150,
+      "speed": 260
+    },
+    {
+      "time": 8600,
+      "type": "basic",
+      "y": 240,
+      "speed": 140
+    },
+    {
+      "time": 9250,
+      "type": "fast",
+      "y": 330,
+      "speed": 270
+    },
+    {
+      "time": 9900,
+      "type": "fast",
+      "y": 240,
+      "speed": 290
+    },
+    {
+      "time": 10550,
+      "type": "basic",
+      "y": 60,
+      "speed": 160
+    },
+    {
+      "time": 11200,
+      "type": "fast",
+      "y": 150,
+      "speed": 240
+    },
+    {
+      "time": 11850,
+      "type": "fast",
+      "y": 240,
+      "speed": 270
+    },
+    {
+      "time": 12500,
+      "type": "basic",
+      "y": 330,
+      "speed": 190
+    },
+    {
+      "time": 13150,
+      "type": "fast",
+      "y": 240,
+      "speed": 260
+    },
+    {
+      "time": 13800,
+      "type": "fast",
+      "y": 60,
+      "speed": 240
+    },
+    {
+      "time": 14450,
+      "type": "basic",
+      "y": 150,
+      "speed": 170
+    },
+    {
+      "time": 15100,
+      "type": "fast",
+      "y": 240,
+      "speed": 290
+    },
+    {
+      "time": 15750,
+      "type": "fast",
+      "y": 330,
+      "speed": 260
+    },
+    {
+      "time": 16400,
+      "type": "basic",
+      "y": 240,
+      "speed": 140
+    },
+    {
+      "time": 17050,
+      "type": "fast",
+      "y": 60,
+      "speed": 270
+    },
+    {
+      "time": 17700,
+      "type": "fast",
+      "y": 150,
+      "speed": 290
+    },
+    {
+      "time": 18350,
+      "type": "basic",
+      "y": 240,
+      "speed": 160
+    },
+    {
+      "time": 19000,
+      "type": "fast",
+      "y": 330,
+      "speed": 240
+    },
+    {
+      "time": 19650,
+      "type": "fast",
+      "y": 240,
+      "speed": 270
+    },
+    {
+      "time": 20300,
+      "type": "basic",
+      "y": 60,
+      "speed": 190
+    },
+    {
+      "time": 20950,
+      "type": "fast",
+      "y": 150,
+      "speed": 260
+    },
+    {
+      "time": 21600,
+      "type": "fast",
+      "y": 240,
+      "speed": 240
+    },
+    {
+      "time": 22250,
+      "type": "basic",
+      "y": 330,
+      "speed": 170
+    },
+    {
+      "time": 22900,
+      "type": "fast",
+      "y": 240,
+      "speed": 290
+    },
+    {
+      "time": 23550,
+      "type": "fast",
+      "y": 60,
+      "speed": 260
+    },
+    {
+      "time": 24200,
+      "type": "basic",
+      "y": 150,
+      "speed": 140
+    },
+    {
+      "time": 24850,
+      "type": "fast",
+      "y": 240,
+      "speed": 270
+    },
+    {
+      "time": 25500,
+      "type": "fast",
+      "y": 330,
+      "speed": 290
+    },
+    {
+      "time": 26150,
+      "type": "basic",
+      "y": 240,
+      "speed": 160
+    },
+    {
+      "time": 26800,
+      "type": "fast",
+      "y": 60,
+      "speed": 240
+    },
+    {
+      "time": 27450,
+      "type": "fast",
+      "y": 150,
+      "speed": 270
+    },
+    {
+      "time": 28100,
+      "type": "basic",
+      "y": 240,
+      "speed": 190
+    }
+  ],
   "boss": {
     "hp": 75,
     "bulletInterval": 600,

@@ -1,4 +1,3 @@
-import Phaser from 'phaser';
 import stage01 from '../data/stages/stage01.json';
 import stage02 from '../data/stages/stage02.json';
 import stage03 from '../data/stages/stage03.json';
@@ -9,13 +8,21 @@ export interface BossConfig {
   bulletSpeed: number;
 }
 
+export interface SpawnEvent {
+  time: number;
+  type: string;
+  y: number;
+  speed: number; // 水平方向の速さ（常に正の値）
+  from?: 'left' | 'right'; // 出現する画面端。省略時は'right'（右から左へ）
+  vy?: number; // 垂直方向の速度（正で下、負で上）。省略時は0（水平移動のみ）
+  crossX?: number; // このX座標を通過した瞬間にvyを0にして水平移動へ切り替える
+}
+
 export interface StageData {
   id: string;
   name: string;
   duration: number;
-  spawnInterval: number;
-  speedMultiplier: number;
-  enemyPool: string[];
+  spawnEvents: SpawnEvent[];
   boss: BossConfig;
 }
 
@@ -23,9 +30,11 @@ const STAGES: StageData[] = [stage01, stage02, stage03];
 
 export class StageManager {
   private index = 0;
+  private spawnCursor = 0;
 
   public reset(): void {
     this.index = 0;
+    this.spawnCursor = 0;
   }
 
   public get current(): StageData {
@@ -48,11 +57,18 @@ export class StageManager {
   public advance(): boolean {
     if (this.isFinalStage) return false;
     this.index += 1;
+    this.spawnCursor = 0;
     return true;
   }
 
-  public pickEnemyType(): string {
-    const pool = this.current.enemyPool;
-    return pool[Phaser.Math.Between(0, pool.length - 1)];
+  /** stageTime(ms)時点で発生済みになった、まだ消化していない出現イベントをまとめて返す。 */
+  public collectDueSpawnEvents(stageTime: number): SpawnEvent[] {
+    const events = this.current.spawnEvents;
+    const due: SpawnEvent[] = [];
+    while (this.spawnCursor < events.length && events[this.spawnCursor].time <= stageTime) {
+      due.push(events[this.spawnCursor]);
+      this.spawnCursor += 1;
+    }
+    return due;
   }
 }

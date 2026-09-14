@@ -26,7 +26,6 @@ export class ShootingScene extends Phaser.Scene {
   private mode: GameMode = 'playing';
 
   private stageTime = 0;
-  private spawnTimer = 0;
   private bossShotTimer = 0;
   private fireTimer = 0;
   private backgroundOffset = 0;
@@ -93,7 +92,6 @@ export class ShootingScene extends Phaser.Scene {
     if (this.mode !== 'playing') return;
 
     this.stageTime += delta;
-    this.spawnTimer += delta;
     this.bossShotTimer += delta;
     this.fireTimer -= delta;
 
@@ -144,7 +142,6 @@ export class ShootingScene extends Phaser.Scene {
     this.mode = 'playing';
     this.stageManager.reset();
     this.stageTime = 0;
-    this.spawnTimer = 0;
     this.fireTimer = 0;
 
     if (this.boss?.active) this.boss.destroy();
@@ -196,7 +193,6 @@ export class ShootingScene extends Phaser.Scene {
   private startNextStage(): void {
     this.mode = 'playing';
     this.stageTime = 0;
-    this.spawnTimer = 0;
     this.bossShotTimer = 0;
     this.fireTimer = 0;
     this.boss = undefined;
@@ -226,12 +222,15 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private updateEnemies(): void {
-    const stage = this.stageManager.current;
-    if (this.spawnTimer > stage.spawnInterval && this.stageTime < stage.duration) {
-      this.spawnTimer = 0;
-      const spawnY = Phaser.Math.Between(40, GAME_CONFIG.PLAY_AREA.HEIGHT - 40);
-      const enemyType = this.stageManager.pickEnemyType();
-      EnemyFactory.create(this, this.enemies, GAME_CONFIG.WIDTH + 30, spawnY, enemyType, stage.speedMultiplier);
+    if (this.stageTime < this.stageManager.current.duration) {
+      const dueEvents = this.stageManager.collectDueSpawnEvents(this.stageTime);
+      for (const event of dueEvents) {
+        const fromLeft = event.from === 'left';
+        const spawnX = fromLeft ? -30 : GAME_CONFIG.WIDTH + 30;
+        const velocityX = fromLeft ? event.speed : -event.speed;
+        const velocityY = event.vy ?? 0;
+        EnemyFactory.create(this, this.enemies, spawnX, event.y, event.type, velocityX, velocityY, event.crossX);
+      }
     }
 
     this.bullets.children.each((child: Phaser.GameObjects.GameObject) => {
@@ -244,7 +243,7 @@ export class ShootingScene extends Phaser.Scene {
 
     this.enemies.children.each((child: Phaser.GameObjects.GameObject) => {
       const sprite = child as Phaser.Physics.Arcade.Sprite;
-      if (sprite.active && sprite.x < -40) {
+      if (sprite.active && (sprite.x < -40 || sprite.x > GAME_CONFIG.WIDTH + 40 || sprite.y < -40 || sprite.y > GAME_CONFIG.PLAY_AREA.HEIGHT + 40)) {
         sprite.disableBody(true, true);
       }
       return true;

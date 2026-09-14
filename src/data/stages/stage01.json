@@ -2,9 +2,548 @@
   "id": "stage01",
   "name": "ステージ1",
   "duration": 25000,
-  "spawnInterval": 900,
-  "speedMultiplier": 1,
-  "enemyPool": ["basic"],
+  "spawnEvents": [
+    {
+      "time": 1000,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 1000,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 1210,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 1210,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 1420,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 1420,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 1630,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 1630,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 1840,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 1840,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 5000,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 5000,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 5210,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 5210,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 5420,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 5420,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 5630,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 5630,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 5840,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 5840,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 9000,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 9000,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 9210,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 9210,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 9420,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 9420,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 9630,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 9630,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 9840,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 9840,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 13000,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 13000,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 13210,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 13210,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 13420,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 13420,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 13630,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 13630,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 13840,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 13840,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 17000,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 17000,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 17210,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 17210,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 17420,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 17420,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 17630,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 17630,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 17840,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "right",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 17840,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "right",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 21000,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 21000,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 21210,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 21210,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 21420,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 21420,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 21630,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 21630,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    },
+    {
+      "time": 21840,
+      "type": "basic",
+      "y": 100,
+      "speed": 150,
+      "from": "left",
+      "vy": 64.7,
+      "crossX": 480
+    },
+    {
+      "time": 21840,
+      "type": "basic",
+      "y": 320,
+      "speed": 150,
+      "from": "left",
+      "vy": -64.7,
+      "crossX": 480
+    }
+  ],
   "boss": {
     "hp": 40,
     "bulletInterval": 900,
