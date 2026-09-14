@@ -4,7 +4,7 @@ import { Bullet } from './Bullet';
 /** 発射後しばらくの間だけ緩やかに自機へ軌道補正する、正方形の敵専用の弾。 */
 export class HomingBullet extends Bullet {
   /** この時間(ms)が経過するまでだけ軌道補正する */
-  private static readonly HOMING_DURATION = 1000;
+  private static readonly HOMING_DURATION = 300;
   /** 旋回速度(rad/s)。小さいほど「少しだけ」追尾する緩い動きになる */
   private static readonly TURN_RATE = Math.PI * 0.8;
 

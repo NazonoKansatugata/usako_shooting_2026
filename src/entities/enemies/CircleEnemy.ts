@@ -5,7 +5,7 @@ import { Enemy } from '../Enemy';
 export class CircleEnemy extends Enemy {
   static readonly TEXTURE_KEY = 'enemyCircle';
   /** 波の振幅(px) */
-  private static readonly WAVE_AMPLITUDE = 20;
+  private static readonly WAVE_AMPLITUDE = 50;
   /** 波の周期(ms) */
   private static readonly WAVE_PERIOD = 1200;
 

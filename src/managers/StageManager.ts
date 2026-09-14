@@ -29,7 +29,10 @@ export interface StageData {
   boss: BossConfig;
 }
 
-const STAGES: StageData[] = [stage01, stage02, stage03];
+// JSONモジュールは形の異なるspawnEvents（旧: vy/crossX/texture持ち、新: shape持ち）が混在すると
+// TypeScriptがfrom/shapeをリテラル型ではなく単なるstringとして幅広く推論してしまうため、
+// データ自体はSpawnEvent/StageDataの形に従っている前提でアサーションする。
+const STAGES: StageData[] = [stage01, stage02, stage03] as unknown as StageData[];
 
 export class StageManager {
   private index = 0;

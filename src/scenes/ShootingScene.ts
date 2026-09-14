@@ -5,7 +5,9 @@ import { Player } from '../entities/Player';
 import { Boss } from '../entities/Boss';
 import { Bullet } from '../entities/Bullet';
 import { HomingBullet } from '../entities/HomingBullet';
+import { WaveBullet } from '../entities/WaveBullet';
 import { Enemy } from '../entities/Enemy';
+import { CircleEnemy } from '../entities/enemies/CircleEnemy';
 import { SquareEnemy } from '../entities/enemies/SquareEnemy';
 import { StarEnemy } from '../entities/enemies/StarEnemy';
 import { EnemyFactory } from '../managers/EnemyFactory';
@@ -21,6 +23,8 @@ export class ShootingScene extends Phaser.Scene {
   /** shooterタイプの雑魚敵が画面内に入ってから発射するまでの遅延(ms) */
   private static readonly SHOOT_DELAY_AFTER_ENTRY = 500;
   private static readonly BGM_LOOP_ADVANCE_SECONDS = 0.1;
+  /** 雑魚敵の移動速度（ステージJSONのspeed/vy）に一律で掛ける倍率 */
+  private static readonly SPEED_MULTIPLIER = 1.3;
 
   private player!: Player;
   private bullets!: Phaser.Physics.Arcade.Group;
@@ -29,6 +33,8 @@ export class ShootingScene extends Phaser.Scene {
   private enemyBullets!: Phaser.Physics.Arcade.Group;
   /** 正方形の敵が撃つ追尾弾専用のプール（通常弾とクラスが異なるため分けている） */
   private enemyHomingBullets!: Phaser.Physics.Arcade.Group;
+  /** 丸の敵が撃つ波形弾専用のプール（通常弾とクラスが異なるため分けている） */
+  private enemyWaveBullets!: Phaser.Physics.Arcade.Group;
   private boss?: Boss;
   private stageManager = new StageManager();
   private settingsManager = SettingsManager.getInstance();
@@ -188,6 +194,7 @@ export class ShootingScene extends Phaser.Scene {
     }
     this.enemyBullets = this.physics.add.group({ defaultKey: 'enemyBullet', maxSize: 40 });
     this.enemyHomingBullets = this.physics.add.group({ defaultKey: 'enemyBullet', maxSize: 20 });
+    this.enemyWaveBullets = this.physics.add.group({ defaultKey: 'enemyBullet', maxSize: 20 });
   }
 
   private forEachEnemyGroup(fn: (group: Phaser.Physics.Arcade.Group) => void): void {
@@ -223,6 +230,7 @@ export class ShootingScene extends Phaser.Scene {
     this.forEachEnemyGroup((group) => group.clear(true, true));
     this.enemyBullets.clear(true, true);
     this.enemyHomingBullets.clear(true, true);
+    this.enemyWaveBullets.clear(true, true);
 
     if (this.player?.active) this.player.destroy();
     this.player = new Player(this, 130, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
@@ -234,6 +242,7 @@ export class ShootingScene extends Phaser.Scene {
     });
     this.physics.add.overlap(this.enemyBullets, this.player, this.hitPlayer, undefined, this);
     this.physics.add.overlap(this.enemyHomingBullets, this.player, this.hitPlayer, undefined, this);
+    this.physics.add.overlap(this.enemyWaveBullets, this.player, this.hitPlayer, undefined, this);
 
     this.banner.setVisible(false);
     this.instruction.setVisible(false);
@@ -260,6 +269,7 @@ export class ShootingScene extends Phaser.Scene {
     this.forEachEnemyGroup((group) => group.clear(true, true));
     this.enemyBullets.clear(true, true);
     this.enemyHomingBullets.clear(true, true);
+    this.enemyWaveBullets.clear(true, true);
 
     const clearSeconds = (this.stageTime / 1000).toFixed(1);
     const hp = Math.max(0, this.player.hp);
@@ -281,6 +291,7 @@ export class ShootingScene extends Phaser.Scene {
     this.forEachEnemyGroup((group) => group.clear(true, true));
     this.enemyBullets.clear(true, true);
     this.enemyHomingBullets.clear(true, true);
+    this.enemyWaveBullets.clear(true, true);
 
     this.banner.setVisible(false);
     this.instruction.setVisible(false);
@@ -307,6 +318,7 @@ export class ShootingScene extends Phaser.Scene {
     this.forEachEnemyGroup((group) => group.clear(true, true));
     this.enemyBullets.clear(true, true);
     this.enemyHomingBullets.clear(true, true);
+    this.enemyWaveBullets.clear(true, true);
 
     this.player.resetStats();
     this.player.setPosition(130, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
@@ -350,8 +362,8 @@ export class ShootingScene extends Phaser.Scene {
       for (const event of dueEvents) {
         const fromLeft = event.from === 'left';
         const spawnX = fromLeft ? -30 : GAME_CONFIG.WIDTH + 30;
-        const velocityX = fromLeft ? event.speed : -event.speed;
-        const velocityY = event.vy ?? 0;
+        const velocityX = (fromLeft ? event.speed : -event.speed) * ShootingScene.SPEED_MULTIPLIER;
+        const velocityY = (event.vy ?? 0) * ShootingScene.SPEED_MULTIPLIER;
         const canShoot = event.type === 'shooter';
         const shape = event.shape ?? 'triangle';
         EnemyFactory.create(
@@ -380,6 +392,8 @@ export class ShootingScene extends Phaser.Scene {
             this.fireEnemyFanShot(enemy.x, enemy.y);
           } else if (enemy instanceof SquareEnemy) {
             this.fireEnemyHomingShot(enemy.x, enemy.y);
+          } else if (enemy instanceof CircleEnemy) {
+            this.fireEnemyWaveShot(enemy.x, enemy.y);
           } else {
             this.fireEnemyAimedShot(enemy.x, enemy.y);
           }
@@ -401,6 +415,14 @@ export class ShootingScene extends Phaser.Scene {
     });
 
     this.enemyHomingBullets.children.each((child: Phaser.GameObjects.GameObject) => {
+      const sprite = child as Phaser.Physics.Arcade.Sprite;
+      if (sprite.active && (sprite.x < -30 || sprite.x > GAME_CONFIG.WIDTH + 30 || sprite.y < -30 || sprite.y > GAME_CONFIG.PLAY_AREA.HEIGHT + 30)) {
+        sprite.disableBody(true, true);
+      }
+      return true;
+    });
+
+    this.enemyWaveBullets.children.each((child: Phaser.GameObjects.GameObject) => {
       const sprite = child as Phaser.Physics.Arcade.Sprite;
       if (sprite.active && (sprite.x < -30 || sprite.x > GAME_CONFIG.WIDTH + 30 || sprite.y < -30 || sprite.y > GAME_CONFIG.PLAY_AREA.HEIGHT + 30)) {
         sprite.disableBody(true, true);
@@ -445,7 +467,7 @@ export class ShootingScene extends Phaser.Scene {
   /** type:'shooter'の雑魚敵が出現した瞬間に、その場からプレイヤーへの角度で1発だけ自機狙い弾を撃つ。 */
   private fireEnemyAimedShot(x: number, y: number): void {
     const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
-    const bulletSpeed = 350;
+    const bulletSpeed = 455;
 
     let bullet = this.enemyBullets.getFirstDead(false) as Bullet;
     if (!bullet) {
@@ -458,7 +480,7 @@ export class ShootingScene extends Phaser.Scene {
   /** 星型の雑魚敵：自機方向を中心に±40度を5等分した扇状に5発同時発射する。 */
   private fireEnemyFanShot(x: number, y: number): void {
     const baseAngle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
-    const bulletSpeed = 320;
+    const bulletSpeed = 415;
     const spreadDeg = 80;
     const count = 5;
     const stepDeg = spreadDeg / (count - 1);
@@ -479,7 +501,7 @@ export class ShootingScene extends Phaser.Scene {
   /** 正方形の雑魚敵：発射後1秒だけ緩く自機へ軌道補正する弾を1発撃つ。 */
   private fireEnemyHomingShot(x: number, y: number): void {
     const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
-    const bulletSpeed = 300;
+    const bulletSpeed = 390;
 
     let bullet = this.enemyHomingBullets.getFirstDead(false) as HomingBullet;
     if (!bullet) {
@@ -487,6 +509,19 @@ export class ShootingScene extends Phaser.Scene {
       this.enemyHomingBullets.add(bullet);
     }
     bullet.fireHoming(x, y, Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed, this.player);
+  }
+
+  /** 丸の雑魚敵：自機方向へ直進しつつ、進行方向に対して垂直にサイン波で揺れる弾を1発撃つ。 */
+  private fireEnemyWaveShot(x: number, y: number): void {
+    const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
+    const bulletSpeed = 400;
+
+    let bullet = this.enemyWaveBullets.getFirstDead(false) as WaveBullet;
+    if (!bullet) {
+      bullet = new WaveBullet(this, x, y, 'enemyBullet');
+      this.enemyWaveBullets.add(bullet);
+    }
+    bullet.fireWave(x, y, angle, bulletSpeed);
   }
 
   private hitEnemy(object1: any, object2: any): void {
