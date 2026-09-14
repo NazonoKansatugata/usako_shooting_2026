@@ -22,12 +22,25 @@ export class OpeningScene extends Phaser.Scene {
   private activeSegment: OpeningSegmentId | null = null;
   private hasStarted = false;
   private musicStarted = false;
-  private prompt!: Phaser.GameObjects.Text;
-  private promptBackground!: Phaser.GameObjects.Graphics;
+  private isFullOpening = false;
+  private returnScene = 'title';
+  private isFromOption = false;
+  private warningContainer?: Phaser.GameObjects.Container;
   private progressBar!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super('opening');
+  }
+
+  init(data?: { fullOpening?: boolean; returnScene?: string }): void {
+    this.isFullOpening = data?.fullOpening ?? GAME_CONFIG.ENABLE_STARTUP_FULL_OPENING;
+    this.returnScene = data?.returnScene ?? 'title';
+    this.isFromOption = !!data?.returnScene && data.returnScene !== 'title';
+    this.hasStarted = false;
+    this.musicStarted = false;
+    this.elapsed = 0;
+    this.preludeElapsed = 0;
+    this.activeSegment = null;
   }
 
   preload(): void {
@@ -51,21 +64,20 @@ export class OpeningScene extends Phaser.Scene {
     this.visualLayer = this.add.container(0, 0);
     this.createStars();
     this.createChrome();
-    this.promptBackground = this.add.graphics().setDepth(19);
-    this.promptBackground.fillStyle(0x0b1730, 0.92).fillRoundedRect(250, GAME_CONFIG.HEIGHT - 62, 460, 42, 8);
-    this.promptBackground.lineStyle(1, 0xf6d365, 0.8).strokeRoundedRect(250, GAME_CONFIG.HEIGHT - 62, 460, 42, 8);
-    this.prompt = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - 41, '画面をクリック / ENTER：オープニング開始', {
-      fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '16px',
-      color: '#f6d365',
-      fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(20);
+
+    if (this.isFromOption) {
+      // オプション・おまけからの再生時は警告なしで直接開始
+      this.beginOpening();
+    } else {
+      // 起動時は注意書きモーダルを表示
+      this.createWarningModal();
+    }
 
     this.input.on('pointerdown', () => this.handlePointerDown());
-    this.input.keyboard?.once('keydown-ENTER', () => this.beginOpening());
+    this.input.keyboard?.on('keydown-ENTER', () => {
+      if (!this.hasStarted) this.beginOpening();
+    });
     this.input.keyboard?.on('keydown-SPACE', () => this.skipOpening());
-
-    if (!this.sound.locked) this.beginOpening();
   }
 
   update(_time: number, delta: number): void {
@@ -75,7 +87,14 @@ export class OpeningScene extends Phaser.Scene {
     if (!this.musicStarted) {
       this.preludeElapsed += delta / 1000;
       renderPreludeCut(this.getCutContext(), this.preludeElapsed, OPENING_TIMELINE.preludeDuration);
-      if (this.preludeElapsed >= OPENING_TIMELINE.preludeDuration) this.startMusic();
+      if (this.preludeElapsed >= OPENING_TIMELINE.preludeDuration) {
+        if (this.isFullOpening) {
+          this.startMusic();
+        } else {
+          // フルOP無効時（起動時）はシーン0完了でタイトル画面へ遷移
+          this.finishOpening();
+        }
+      }
       return;
     }
 
@@ -97,8 +116,10 @@ export class OpeningScene extends Phaser.Scene {
   private beginOpening(): void {
     if (this.hasStarted) return;
     this.hasStarted = true;
-    this.prompt.setVisible(false);
-    this.promptBackground.setVisible(false);
+    if (this.warningContainer) {
+      this.warningContainer.destroy();
+      this.warningContainer = undefined;
+    }
     renderPreludeCut(this.getCutContext(), 0, OPENING_TIMELINE.preludeDuration);
   }
 
@@ -130,9 +151,94 @@ export class OpeningScene extends Phaser.Scene {
 
   private finishOpening(): void {
     this.openingMusic?.stop();
-    this.prompt.setVisible(false);
-    this.promptBackground.setVisible(false);
-    this.scene.start('title');
+    if (this.warningContainer) {
+      this.warningContainer.destroy();
+      this.warningContainer = undefined;
+    }
+    this.scene.start(this.returnScene, {
+      playIntro: this.returnScene === 'title' && !this.isFromOption,
+    });
+  }
+
+  private createWarningModal(): void {
+    this.warningContainer = this.add.container(0, 0).setDepth(20);
+
+    const boxW = 560;
+    const boxH = 340;
+    const boxX = (GAME_CONFIG.WIDTH - boxW) / 2;
+    const boxY = (GAME_CONFIG.HEIGHT - boxH) / 2;
+
+    // 半透明背景ボックス
+    const box = this.add.graphics();
+    box.fillStyle(0x0b1730, 0.94);
+    box.fillRoundedRect(boxX, boxY, boxW, boxH, 12);
+    box.lineStyle(2, 0xf6d365, 0.85);
+    box.strokeRoundedRect(boxX, boxY, boxW, boxH, 12);
+    this.warningContainer.add(box);
+
+    // タイトル
+    const titleText = this.add.text(GAME_CONFIG.WIDTH / 2, boxY + 34, '【 ゲームを始める前に 】', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '22px',
+      color: '#f6d365',
+      fontStyle: 'bold',
+      stroke: '#050914',
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+    this.warningContainer.add(titleText);
+
+    // 区切り線
+    const divider = this.add.graphics();
+    divider.lineStyle(1, 0x3e638c, 0.6);
+    divider.lineBetween(boxX + 30, boxY + 62, boxX + boxW - 30, boxY + 62);
+    this.warningContainer.add(divider);
+
+    // 注意事項
+    const notices = [
+      '・ 音が出ること',
+      '・ 低クオリティであること',
+      '・ 身内ネタが激しいこと',
+      '',
+      '以上の点にご注意ください',
+    ];
+    const noticeText = this.add.text(boxX + 64, boxY + 82, notices.join('\n'), {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '18px',
+      color: '#f8fafc',
+      lineSpacing: 12,
+    });
+    this.warningContainer.add(noticeText);
+
+    // アクションボタン風枠
+    const btnW = 440;
+    const btnH = 46;
+    const btnX = (GAME_CONFIG.WIDTH - btnW) / 2;
+    const btnY = boxY + boxH - 74;
+
+    const btnBg = this.add.graphics();
+    btnBg.fillStyle(0x13233d, 0.9);
+    btnBg.fillRoundedRect(btnX, btnY, btnW, btnH, 8);
+    btnBg.lineStyle(1.5, 0xf6d365, 0.9);
+    btnBg.strokeRoundedRect(btnX, btnY, btnW, btnH, 8);
+    this.warningContainer.add(btnBg);
+
+    const startPrompt = this.add.text(GAME_CONFIG.WIDTH / 2, btnY + btnH / 2, '画面をクリック / ENTER で開始', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '16px',
+      color: '#f6d365',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.warningContainer.add(startPrompt);
+
+    // ボタンの明滅アニメーション
+    this.tweens.add({
+      targets: [btnBg, startPrompt],
+      alpha: 0.65,
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   private renderSegment(segment: OpeningSegmentId): void {
