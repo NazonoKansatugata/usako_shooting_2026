@@ -15,13 +15,17 @@ export class EnemyFactory {
     speedX = -120,
     speedY = 0,
     crossX?: number,
+    texture = 'enemy',
+    canShoot = false,
+    shootDelay = 0,
   ): Enemy {
     let enemy = group.getFirstDead(false) as Enemy;
     if (!enemy) {
-      enemy = new Enemy(scene, x, y, 'enemy');
+      enemy = new Enemy(scene, x, y, texture);
       group.add(enemy);
     }
-    enemy.spawn(x, y, speedX, speedY, crossX);
+    enemy.setTexture(texture); // プールから再利用した個体にも見た目を反映させる
+    enemy.spawn(x, y, speedX, speedY, crossX, canShoot, shootDelay);
     return enemy;
   }
 }
