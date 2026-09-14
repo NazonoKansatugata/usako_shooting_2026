@@ -56,19 +56,26 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (!this.active) return;
 
     this.updateMovement(time, delta);
+    this.updateShooting(time, delta);
+  }
 
-    if (this.canShoot) {
-      if (!this.hasEnteredScreen) {
-        if (this.x >= 0 && this.x <= GAME_CONFIG.WIDTH) {
-          this.hasEnteredScreen = true;
-          this.shootTimer = this.shootDelay;
-        }
-      } else if (this.shootTimer > 0) {
-        this.shootTimer -= delta;
-        if (this.shootTimer <= 0) {
-          this.pendingShot = true;
-          this.canShoot = false; // 1体につき1回だけ
-        }
+  /**
+   * 発射タイミングの管理。既定では「画面内に入ってからshootDelay(ms)後に1回だけpendingShotを立てる」。
+   * 独自の発射タイミングを持たせたいサブクラス（例: 星の停止攻撃）はこれをオーバーライドする。
+   */
+  protected updateShooting(_time: number, delta: number): void {
+    if (!this.canShoot) return;
+
+    if (!this.hasEnteredScreen) {
+      if (this.x >= 0 && this.x <= GAME_CONFIG.WIDTH) {
+        this.hasEnteredScreen = true;
+        this.shootTimer = this.shootDelay;
+      }
+    } else if (this.shootTimer > 0) {
+      this.shootTimer -= delta;
+      if (this.shootTimer <= 0) {
+        this.pendingShot = true;
+        this.canShoot = false; // 1体につき1回だけ
       }
     }
   }
