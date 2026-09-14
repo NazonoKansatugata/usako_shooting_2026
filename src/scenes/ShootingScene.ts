@@ -74,6 +74,9 @@ export class ShootingScene extends Phaser.Scene {
     this.load.image('player-wing-1', 'assets/picture/player/DefineSprite_149/1.png');
     this.load.image('player-wing-3', 'assets/picture/player/DefineSprite_149/3.png');
     this.load.image('player-hit', 'assets/picture/player/DefineSprite_168/90.png');
+    this.load.image('dialogue-usako', 'assets/picture/player/DefineSprite_44/1.png');
+    this.load.image('dialogue-nekoko', 'assets/picture/player/DefineSprite_54/1.png');
+    this.load.image('dialogue-keroko', 'assets/picture/player/DefineSprite_190/4.png');
     this.load.audio('stage_bgm', 'assets/bgm/1226(ステージテーマ).mp3');
     this.load.audio('boss_bgm', 'assets/bgm/1283(ボス出現).mp3');
     this.load.audio('se_enemy_defeat', 'assets/se/311(敵撃破音).mp3');
