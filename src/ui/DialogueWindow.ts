@@ -2,6 +2,12 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
 import { DialogueItem } from '../types';
 
+const DEFAULT_PORTRAIT_KEYS: Record<string, string> = {
+  うさこ: 'dialogue-usako',
+  ねここ: 'dialogue-nekoko',
+  けろこ: 'dialogue-keroko',
+};
+
 export class DialogueWindow extends Phaser.GameObjects.Container {
   private bgGraphics: Phaser.GameObjects.Graphics;
   private monitorGraphics: Phaser.GameObjects.Graphics;
@@ -254,19 +260,21 @@ export class DialogueWindow extends Phaser.GameObjects.Container {
     this.speakerText.setText(`【${item.speaker}】`);
     this.messageText.setText(item.text);
 
-    // 立ち絵対応
-    if (item.portrait && this.scene.textures.exists(item.portrait)) {
+    // portrait指定を優先し、未指定時は話者名から標準画像を選ぶ
+    const portraitKey = item.portrait ?? DEFAULT_PORTRAIT_KEYS[item.speaker];
+    if (portraitKey && this.scene.textures.exists(portraitKey)) {
       if (!this.portraitImage) {
-        this.portraitImage = this.scene.add.image(0, 0, item.portrait);
+        this.portraitImage = this.scene.add.image(0, 0, portraitKey);
         this.dialogueContainer.add(this.portraitImage);
       } else {
-        this.portraitImage.setTexture(item.portrait);
+        this.portraitImage.setTexture(portraitKey);
         this.portraitImage.setVisible(true);
       }
 
       const isRight = item.portraitPosition === 'right';
       const posX = isRight ? area.WIDTH - 60 : 50;
-      this.portraitImage.setPosition(posX, area.HEIGHT / 2);
+      const portraitScale = Math.min(1, (area.HEIGHT - 8) / this.portraitImage.height);
+      this.portraitImage.setScale(portraitScale).setPosition(posX, area.HEIGHT / 2);
 
       this.messageText.setWordWrapWidth(area.WIDTH - 140);
       if (isRight) {
