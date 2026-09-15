@@ -10,6 +10,8 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   private crossX?: number;
   /** 形状ごとの移動速度倍率。サブクラスでオーバーライドする（例: 三角形を高速化）。 */
   protected speedMultiplier = 1;
+  /** 見た目・当たり判定の拡大率。画像/当たり判定が小さすぎたため底上げしている。形状ごとに調整したい場合はサブクラスで上書きする。 */
+  protected spriteScale = 1.6;
   /** spawn()が呼ばれた時刻(ms)。形状ごとの時間依存の移動（波形移動など）に使う。 */
   protected spawnTime = 0;
 
@@ -27,6 +29,8 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.defaultTexture = texture;
     scene.add.existing(this);
     scene.physics.add.existing(this);
+    // setSize/setCircleは呼び出し時点のスケールを当たり判定に反映するため、setupHitbox()より先にscaleを適用する
+    this.setScale(this.spriteScale);
     this.setupHitbox();
   }
 

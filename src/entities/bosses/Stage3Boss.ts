@@ -17,8 +17,8 @@ export class Stage3Boss extends Boss {
 
   private static readonly LANE_X = [190, 480, 770];
   private static readonly BEAM_WIDTH = 150;
-  private static readonly WARNING_MS_BASE = 800;
-  private static readonly WARNING_MS_LOW = 600;
+  private static readonly WARNING_MS_BASE = 1100;
+  private static readonly WARNING_MS_LOW = 850;
   private static readonly ACTIVE_MS = 350;
   private static readonly HP_THRESHOLD = 0.5;
   private static readonly HORIZONTAL_BEAM_HEIGHT = 70;

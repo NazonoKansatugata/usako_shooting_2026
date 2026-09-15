@@ -17,7 +17,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 2000,
@@ -27,7 +27,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 2210,
@@ -37,7 +37,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 2210,
@@ -47,7 +47,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 2420,
@@ -57,7 +57,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 2420,
@@ -67,7 +67,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 3620,
@@ -77,7 +77,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 3620,
@@ -87,7 +87,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 3830,
@@ -97,7 +97,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 3830,
@@ -107,7 +107,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 4040,
@@ -117,7 +117,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 4040,
@@ -127,7 +127,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 5240,
@@ -201,7 +201,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 10840,
@@ -211,7 +211,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 11030,
@@ -221,7 +221,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 11030,
@@ -231,7 +231,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 11220,
@@ -241,7 +241,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 11220,
@@ -251,7 +251,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 12420,
@@ -261,7 +261,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 12420,
@@ -271,7 +271,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 12610,
@@ -281,7 +281,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 12610,
@@ -291,7 +291,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 12800,
@@ -301,7 +301,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 12800,
@@ -311,7 +311,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 14000,
@@ -385,7 +385,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 19300,
@@ -395,7 +395,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 19470,
@@ -405,7 +405,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 19470,
@@ -415,7 +415,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 19640,
@@ -425,7 +425,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 19640,
@@ -435,7 +435,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 20840,
@@ -445,7 +445,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 20840,
@@ -455,7 +455,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 21010,
@@ -465,7 +465,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 21010,
@@ -475,7 +475,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 21180,
@@ -485,7 +485,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 21180,
@@ -495,7 +495,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 22380,
@@ -569,7 +569,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 27440,
@@ -579,7 +579,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 27590,
@@ -589,7 +589,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 27590,
@@ -599,7 +599,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 27740,
@@ -609,7 +609,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 27740,
@@ -619,7 +619,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 28940,
@@ -629,7 +629,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 28940,
@@ -639,7 +639,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 29090,
@@ -649,7 +649,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 29090,
@@ -659,7 +659,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 29240,
@@ -669,7 +669,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 29240,
@@ -679,7 +679,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 30440,
@@ -753,7 +753,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 35260,
@@ -763,7 +763,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 35395,
@@ -773,7 +773,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 35395,
@@ -783,7 +783,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 35530,
@@ -793,7 +793,7 @@
       "from": "right",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 35530,
@@ -803,7 +803,7 @@
       "from": "right",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 36730,
@@ -813,7 +813,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 36730,
@@ -823,7 +823,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 36865,
@@ -833,7 +833,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 36865,
@@ -843,7 +843,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 37000,
@@ -853,7 +853,7 @@
       "from": "left",
       "vy": 100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 37000,
@@ -863,7 +863,7 @@
       "from": "left",
       "vy": -100,
       "crossX": 480,
-      "shape": "triangle"
+      "shape": "square"
     },
     {
       "time": 38200,
@@ -933,6 +933,6 @@
   "boss": {
     "hp": 40,
     "bulletInterval": 900,
-    "bulletSpeed": 230
+    "bulletSpeed": 400
   }
 }

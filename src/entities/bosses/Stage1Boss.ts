@@ -1,30 +1,26 @@
 import Phaser from 'phaser';
-import { GAME_CONFIG } from '../../config';
 import { Boss } from './Boss';
 import { Bullet } from '../Bullet';
 
-type Phase = 'movingToCenter' | 'spiraling';
-
 /**
- * ステージ1ボス：出現後まず画面中央へ移動し、そこに留まって0度・90度・180度・270度（十字4方向）へ弾を発射する。
- * 発射のたびにこの4方向を少しずつ回転させることで、全体として渦巻き状の弾幕になる。
+ * ステージ1ボス：画面右側に留まったまま、自機のいる左方向を中心に単発弾を発射し続ける。
+ * 発射のたびに角度を少しずつ広げていき、一定角度まで達したら逆方向へ戻す（左右にスイープする単発弾）。
  */
 export class Stage1Boss extends Boss {
   static readonly TEXTURE_KEY = 'boss1';
 
-  private static readonly CENTER_X = GAME_CONFIG.PLAY_AREA.WIDTH / 2;
-  private static readonly CENTER_Y = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
-  private static readonly MOVE_SPEED = 300;
-  private static readonly ARRIVAL_DISTANCE = 6;
   /** 発射間隔(ms) */
-  private static readonly VOLLEY_INTERVAL = 180;
-  /** 発射のたびに十字4方向の向きをこの角度ずつ回転させ、渦巻き状に見せる */
-  private static readonly ROTATION_STEP = Phaser.Math.DegToRad(10);
-  private static readonly SPOKE_ANGLES = [0, 90, 180, 270].map((deg) => Phaser.Math.DegToRad(deg));
+  private static readonly SHOT_INTERVAL = 140;
+  /** 基準となる発射角度（画面右のボスから左＝プレイエリア側へ向く角度） */
+  private static readonly BASE_ANGLE_DEG = 180;
+  /** 基準角度からの振れ幅（±この角度の範囲でスイープする） */
+  private static readonly SWEEP_RANGE_DEG = 60;
+  /** 発射のたびに角度をこの分だけ変化させる */
+  private static readonly SWEEP_STEP_DEG = 6;
 
-  private phase: Phase = 'movingToCenter';
-  private volleyTimer = 0;
-  private ringAngleOffset = 0;
+  private shotTimer = 0;
+  private sweepOffsetDeg = 0;
+  private sweepDirection: 1 | -1 = 1;
 
   static ensureTexture(scene: Phaser.Scene): void {
     if (scene.textures.exists(Stage1Boss.TEXTURE_KEY)) return;
@@ -45,35 +41,31 @@ export class Stage1Boss extends Boss {
   }
 
   protected onSpawn(): void {
-    this.phase = 'movingToCenter';
-    this.volleyTimer = 0;
-    this.ringAngleOffset = 0;
-    const angle = Phaser.Math.Angle.Between(this.x, this.y, Stage1Boss.CENTER_X, Stage1Boss.CENTER_Y);
-    this.setVelocity(Math.cos(angle) * Stage1Boss.MOVE_SPEED, Math.sin(angle) * Stage1Boss.MOVE_SPEED);
+    this.shotTimer = 0;
+    this.sweepOffsetDeg = 0;
+    this.sweepDirection = 1;
+    this.setVelocity(0, 0);
   }
 
   protected updateBehavior(_time: number, delta: number): void {
-    if (this.phase === 'movingToCenter') {
-      const dist = Phaser.Math.Distance.Between(this.x, this.y, Stage1Boss.CENTER_X, Stage1Boss.CENTER_Y);
-      if (dist <= Stage1Boss.ARRIVAL_DISTANCE) {
-        this.setPosition(Stage1Boss.CENTER_X, Stage1Boss.CENTER_Y);
-        this.setVelocity(0, 0);
-        this.phase = 'spiraling';
-      }
-      return;
-    }
-    this.tickSpiral(delta);
+    this.shotTimer += delta;
+    if (this.shotTimer < Stage1Boss.SHOT_INTERVAL) return;
+    this.shotTimer = 0;
+    this.fireSweepShot();
   }
 
-  private tickSpiral(delta: number): void {
-    this.volleyTimer += delta;
-    if (this.volleyTimer < Stage1Boss.VOLLEY_INTERVAL) return;
-    this.volleyTimer = 0;
+  private fireSweepShot(): void {
+    const angleDeg = Stage1Boss.BASE_ANGLE_DEG + this.sweepOffsetDeg;
+    this.fireBulletAt(Phaser.Math.DegToRad(angleDeg));
 
-    for (const spoke of Stage1Boss.SPOKE_ANGLES) {
-      this.fireBulletAt(this.ringAngleOffset + spoke);
+    this.sweepOffsetDeg += Stage1Boss.SWEEP_STEP_DEG * this.sweepDirection;
+    if (this.sweepOffsetDeg >= Stage1Boss.SWEEP_RANGE_DEG) {
+      this.sweepOffsetDeg = Stage1Boss.SWEEP_RANGE_DEG;
+      this.sweepDirection = -1;
+    } else if (this.sweepOffsetDeg <= -Stage1Boss.SWEEP_RANGE_DEG) {
+      this.sweepOffsetDeg = -Stage1Boss.SWEEP_RANGE_DEG;
+      this.sweepDirection = 1;
     }
-    this.ringAngleOffset += Stage1Boss.ROTATION_STEP;
   }
 
   private fireBulletAt(angle: number): void {
