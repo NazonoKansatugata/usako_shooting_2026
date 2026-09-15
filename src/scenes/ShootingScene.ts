@@ -770,16 +770,6 @@ export class ShootingScene extends Phaser.Scene {
     this.player2?.move(this.cursors.left.isDown, this.cursors.right.isDown, this.cursors.up.isDown, this.cursors.down.isDown);
   }
 
-  /** 中心角度(rad)を中心に、count本の弾をangleStep(rad)間隔の扇形に均等展開した角度配列を返す。 */
-  private static fanAngles(centerAngle: number, count: number, angleStep: number): number[] {
-    const angles: number[] = [];
-    const offsetStart = -((count - 1) / 2) * angleStep;
-    for (let i = 0; i < count; i++) {
-      angles.push(centerAngle + offsetStart + i * angleStep);
-    }
-    return angles;
-  }
-
   private firePlayerBullet(player: Player, isDown: boolean, slot: 1 | 2): void {
     if (!player.active || !isDown) return;
     const timer = slot === 1 ? this.fireTimer1 : this.fireTimer2;
@@ -787,31 +777,19 @@ export class ShootingScene extends Phaser.Scene {
     if (slot === 1) this.fireTimer1 = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
     else this.fireTimer2 = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
 
+    // WEP: 弾数・威力は変えず、レベルごとに自弾の見た目と当たり判定を拡大する。
     const status = this.statusManager.getData(player.variant);
-    const angleStep = Phaser.Math.DegToRad(GAME_CONFIG.FAN_ANGLE_STEP_DEG);
-    const speed = GAME_CONFIG.PLAYER_BULLET_SPEED;
-
-    // WEP: 前方弾。1発が基本形で、WEPレベルごとに1発追加され、複数になると扇形に広がる。
-    const forwardCount = 1 + status.wep;
-    for (const angle of ShootingScene.fanAngles(0, forwardCount, angleStep)) {
-      this.firePlayerBulletAt(player.x + 20, player.y, Math.cos(angle) * speed, Math.sin(angle) * speed);
-    }
-
-    // DEX: 後方弾。レベル0では発射せず、レベルごとに1発ずつ増え、複数になると扇形に広がる。
-    if (status.dex > 0) {
-      for (const angle of ShootingScene.fanAngles(Math.PI, status.dex, angleStep)) {
-        this.firePlayerBulletAt(player.x - 20, player.y, Math.cos(angle) * speed, Math.sin(angle) * speed);
-      }
-    }
+    const bulletScale = 1 + status.wep * GAME_CONFIG.WEP_BULLET_SCALE_PER_LEVEL;
+    this.firePlayerBulletAt(player.x + 20, player.y, GAME_CONFIG.PLAYER_BULLET_SPEED, 0, bulletScale);
   }
 
-  private firePlayerBulletAt(x: number, y: number, vx: number, vy: number): void {
+  private firePlayerBulletAt(x: number, y: number, vx: number, vy: number, scale = 1): void {
     let bullet = this.bullets.getFirstDead(false) as Bullet;
     if (!bullet) {
       bullet = new Bullet(this, x, y, 'bullet');
       this.bullets.add(bullet);
     }
-    bullet.fire(x, y, vx, vy);
+    bullet.fire(x, y, vx, vy, scale);
   }
 
   private updateEnemies(): void {
