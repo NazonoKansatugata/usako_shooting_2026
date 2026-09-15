@@ -6,21 +6,21 @@
       "triggerType": "stageStart",
       "speaker": "うさこ",
       "text": "出発進行ウサ―！",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_02",
       "triggerType": "stageStart",
       "speaker": "ねここ",
-      "text": "目指すは隕石墜落地点ニャ！",
-      "duration": 1000
+      "text": "目指すは隕石がおちたところニャ！",
+      "duration": 1500
     },
     {
       "id": "s1_03",
       "triggerType": "stageStart",
       "speaker": "けろこ",
       "text": "二人とも気を付けるケロ！",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_04",
@@ -28,7 +28,7 @@
       "triggerPercent": 3,
       "speaker": "うさこ",
       "text": "いやーさっきは死ぬかと思ったウサ",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_05",
@@ -36,7 +36,7 @@
       "triggerPercent": 3,
       "speaker": "ねここ",
       "text": "地球ごと大爆発して、ねここ達宇宙まで飛ばされてたニャ...",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_06",
@@ -44,47 +44,31 @@
       "triggerPercent": 3,
       "speaker": "けろこ",
       "text": "逆に何で生きてるケロ…？",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_early_01",
-      "triggerType": "progress",
-      "triggerPercent": 10,
+      "triggerType": "event",
+      "triggerPercent": 15,
       "speaker": "けろこ",
-      "text": "敵がいっぱい出てきたケロ！",
-      "duration": 1000
+      "text": "あっ敵がいっぱい出てきたケロ！",
+      "duration": 1500
     },
     {
       "id": "s1_early_02",
-      "triggerType": "progress",
-      "triggerPercent": 10,
+      "triggerType": "event",
+      "triggerPercent": 15,
       "speaker": "ねここ",
       "text": "いつものことニャ",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_early_03",
-      "triggerType": "progress",
-      "triggerPercent": 10,
+      "triggerType": "event",
+      "triggerPercent": 15,
       "speaker": "うさこ",
       "text": "ロッ〇バスターが火を噴くウサ！",
-      "duration": 1000
-    },
-    {
-      "id": "s1_early_04",
-      "triggerType": "progress",
-      "triggerPercent": 10,
-      "speaker": "けろこ",
-      "text": "アイテムも効果的に使うケロ！",
-      "duration": 1000
-    },
-    {
-      "id": "s1_early_05",
-      "triggerType": "progress",
-      "triggerPercent": 10,
-      "speaker": "けろこ",
-      "text": "(今〇ックバスターって言ったケロ...?)",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_early_07",
@@ -92,8 +76,8 @@
       "eventId": "s1_early",
       "triggerPercent": 30,
       "speaker": "ねここ",
-      "text": "連戦連勝ニャ！",
-      "duration": 1000
+      "text": "楽勝ニャ！",
+      "duration": 1500
     },
     {
       "id": "s1_early_08",
@@ -102,7 +86,7 @@
       "triggerPercent": 30,
       "speaker": "うさこ",
       "text": "そういえば、あのパンダは何しに来てるウサ？",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_early_09",
@@ -111,7 +95,7 @@
       "triggerPercent": 30,
       "speaker": "ねここ",
       "text": "いつも急に表れては、何もせずに帰っていくニャね",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_early_10",
@@ -120,7 +104,7 @@
       "triggerPercent": 30,
       "speaker": "けろこ",
       "text": "遊びたかっただけの野良パンダという説もあるケロ",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_early_11",
@@ -129,7 +113,7 @@
       "triggerPercent": 30,
       "speaker": "うさこ",
       "text": "なるほど！納得ウサ！",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_early_12",
@@ -138,7 +122,7 @@
       "triggerPercent": 30,
       "speaker": "ねここ",
       "text": "空を飛んでることには言及無しニャ!?",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_mid_01",
@@ -147,7 +131,7 @@
       "triggerPercent": 50,
       "speaker": "けろこ",
       "text": "そろそろ折り返しケロ！",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_mid_02",
@@ -156,7 +140,7 @@
       "triggerPercent": 50,
       "speaker": "ねここ",
       "text": "意外と長いニャね...",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_mid_03",
@@ -165,7 +149,7 @@
       "triggerPercent": 50,
       "speaker": "うさこ",
       "text": "...なんかこのステージ、ずっと既視感があるウサね",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_mid_04",
@@ -174,7 +158,7 @@
       "triggerPercent": 50,
       "speaker": "ねここ",
       "text": "昔ロボットと戦った時もこんな敵配置だった気がするニャ",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_mid_05",
@@ -183,7 +167,7 @@
       "triggerPercent": 50,
       "speaker": "けろこ",
       "text": "何か意味があったりするかもしれないかもしれないケロね",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_mid_06",
@@ -210,7 +194,7 @@
       "triggerPercent": 50,
       "speaker": "けろこ",
       "text": "ひどい言われようケロね...",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_late_01",
@@ -218,7 +202,7 @@
       "triggerPercent": 75,
       "speaker": "うさこ",
       "text": "そろそろ見えてきたウサー！",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_late_02",
@@ -226,7 +210,7 @@
       "triggerPercent": 75,
       "speaker": "ねここ",
       "text": "なんだかんだ長かったニャね...",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_late_03",
@@ -234,7 +218,7 @@
       "triggerPercent": 75,
       "speaker": "うさこ",
       "text": "ここまで来れば、お宝は目の前ウサ！",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_late_04",
@@ -242,7 +226,7 @@
       "triggerPercent": 75,
       "speaker": "ねここ",
       "text": "冒険の趣旨が変わってるニャ!?",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_late_05",
@@ -250,7 +234,7 @@
       "triggerPercent": 75,
       "speaker": "けろこ",
       "text": "近くに高エネルギー反応！気を付けるケロ！",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_late_06",
@@ -259,7 +243,7 @@
       "triggerPercent": 75,
       "speaker": "ねここ",
       "text": "いわゆるステージボスってやつニャ！",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_late_07",
@@ -268,119 +252,119 @@
       "triggerPercent": 75,
       "speaker": "うさこ",
       "text": "お決まりのパターンウサね",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_01",
       "triggerType": "bossDefeat",
       "speaker": "うさこ",
       "text": "ついたウサー！",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_02",
       "triggerType": "bossDefeat",
       "speaker": "ねここ",
       "text": "なんか色々散らかってるニャね",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_03",
       "triggerType": "bossDefeat",
       "speaker": "うさこ",
       "text": "見覚えのあるものも混ざってるウサ",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_04",
       "triggerType": "bossDefeat",
       "speaker": "けろこ",
       "text": "待つケロ。これは……",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_05",
       "triggerType": "bossDefeat",
       "speaker": "うさこ",
       "text": "けろこ、何か知ってるウサ？",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_06",
       "triggerType": "bossDefeat",
       "speaker": "けろこ",
       "text": "……ゼ〇伝時オ〇の新作リメイクケロ...",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_07",
       "triggerType": "bossDefeat",
       "speaker": "うさこ",
       "text": "時オ〇!?もうリメイクが出るウサ!？",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_08",
       "triggerType": "bossDefeat",
       "speaker": "ねここ",
       "text": "人気作とはいえ8年でリメイクがでるのはすごいニャね",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_09",
       "triggerType": "bossDefeat",
       "speaker": "けろこ",
       "text": "違うケロ…パッケージには…2026年と書いてあるケロ...",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_10",
       "triggerType": "bossDefeat",
       "speaker": "ねここ",
       "text": "まさか、あの隕石……",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_11",
       "triggerType": "bossDefeat",
       "speaker": "うさこ",
       "text": "タイムマシンだったウサ！？",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bosspre_12",
       "triggerType": "bossDefeat",
       "speaker": "けろこ",
       "text": "そんな都合のいい話があるわけ――",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bossdefeat_01",
       "triggerType": "bossDefeat",
       "speaker": "演出",
       "text": "隕石が光る",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bossdefeat_02",
       "triggerType": "bossDefeat",
       "speaker": "けろこ",
       "text": "……ケロ？",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bossdefeat_03",
       "triggerType": "bossDefeat",
       "speaker": "ねここ",
       "text": "光ったニャ！？",
-      "duration": 1000
+      "duration": 1500
     },
     {
       "id": "s1_bossdefeat_04",
       "triggerType": "bossDefeat",
       "speaker": "うさこ",
       "text": "吸い込まれるウサーーーー！！",
-      "duration": 1000
+      "duration": 1500
     }
   ]
 }
