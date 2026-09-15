@@ -17,7 +17,7 @@ export interface StatusSaveData {
 }
 
 /** 各ステータスの上限レベル */
-export const STATUS_MAX_LEVEL = 10;
+export const STATUS_MAX_LEVEL = 5;
 
 const STORAGE_KEY = 'usako_shooting_status_v1';
 
@@ -28,6 +28,28 @@ const DEFAULT_STATUS_DATA: StatusSaveData = {
   p2: { ...DEFAULT_PLAYER_STATUS },
 };
 
+/** 現在のレベル(0始まり)から1レベル上げるのに必要なポイント数。上がるごとに倍々で重くなる
+ *  （Lv0→1:1pt, 1→2:2pt, 2→3:4pt, 3→4:8pt, 4→5:16pt、合計31ptで最大Lv5に到達）。 */
+export function costForLevel(currentLevel: number): number {
+  return 2 ** currentLevel;
+}
+
+/** 上限レベル引き下げ前のセーブデータで現在の上限を超えているレベルがあれば、
+ *  超過分をこのコスト表に基づいて未使用ポイントへ払い戻しつつ現行のPlayerStatusData形状に正規化する。 */
+function normalizePlayerStatus(parsed: unknown): PlayerStatusData {
+  const source = (parsed ?? {}) as Partial<PlayerStatusData>;
+  const merged: PlayerStatusData = { ...DEFAULT_PLAYER_STATUS, ...source };
+
+  (['wep', 'str', 'def', 'dex'] as const).forEach((stat) => {
+    while (merged[stat] > STATUS_MAX_LEVEL) {
+      merged[stat] -= 1;
+      merged.points += costForLevel(merged[stat]);
+    }
+  });
+
+  return merged;
+}
+
 /** ゲームオーバーのたびに貯まるステータスポイントと、WEP/STR/DEF/DEXへの割り振りを永続化するマネージャー */
 export class StatusManager {
   private static instance: StatusManager;
@@ -35,6 +57,9 @@ export class StatusManager {
 
   private constructor() {
     this.data = this.loadData();
+    // 旧WEPレベルのポイント払い戻しなど、loadData()での正規化結果を確実に永続化する
+    // （ポイント振り分け操作が一度も行われないままアプリを終了しても失われないようにする）
+    this.saveData();
   }
 
   public static getInstance(): StatusManager {
@@ -54,22 +79,24 @@ export class StatusManager {
     this.saveData();
   }
 
-  /** ポイントを1消費してstatを1レベル上げる。成功したらtrue。 */
+  /** 現在のレベルに応じたコスト（costForLevel参照。倍々で重くなる）を消費してstatを1レベル上げる。成功したらtrue。 */
   public allocate(player: PlayerVariant, stat: StatKey): boolean {
     const status = this.data[player];
-    if (status.points <= 0 || status[stat] >= STATUS_MAX_LEVEL) return false;
-    status.points -= 1;
+    if (status[stat] >= STATUS_MAX_LEVEL) return false;
+    const cost = costForLevel(status[stat]);
+    if (status.points < cost) return false;
+    status.points -= cost;
     status[stat] += 1;
     this.saveData();
     return true;
   }
 
-  /** statを1レベル下げてポイントを1返す。成功したらtrue。 */
+  /** statを1レベル下げて、そのレベルに支払ったコスト分のポイントを返す。成功したらtrue。 */
   public deallocate(player: PlayerVariant, stat: StatKey): boolean {
     const status = this.data[player];
     if (status[stat] <= 0) return false;
     status[stat] -= 1;
-    status.points += 1;
+    status.points += costForLevel(status[stat]);
     this.saveData();
     return true;
   }
@@ -90,8 +117,8 @@ export class StatusManager {
       if (raw) {
         const parsed = JSON.parse(raw);
         return {
-          p1: { ...DEFAULT_PLAYER_STATUS, ...parsed.p1 },
-          p2: { ...DEFAULT_PLAYER_STATUS, ...parsed.p2 },
+          p1: normalizePlayerStatus(parsed.p1),
+          p2: normalizePlayerStatus(parsed.p2),
         };
       }
     } catch (e) {

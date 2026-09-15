@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
-import { StatusManager, STATUS_MAX_LEVEL, StatKey, PlayerStatusData } from '../managers/StatusManager';
+import { StatusManager, STATUS_MAX_LEVEL, StatKey, PlayerStatusData, costForLevel } from '../managers/StatusManager';
 import { PlayerVariant } from '../entities/Player';
 
 interface StatusSceneData {
@@ -18,10 +18,10 @@ interface StatRow {
 }
 
 const STAT_ROWS: StatRow[] = [
-  { key: 'wep', label: 'WEP', color: 0xff8a3d, description: 'WEP：前方弾が1発増える。複数になると扇状に広がって発射される。' },
+  { key: 'wep', label: 'WEP', color: 0xff8a3d, description: 'WEP：自弾の見た目と当たり判定が大きくなる。Lvが上がるほど弾が太くなり、敵に当てやすくなる。' },
   { key: 'str', label: 'STR', color: 0xff5d7a, description: 'STR：自機の移動速度が上がる。避けにも攻めにも使える基礎ステータス。' },
   { key: 'def', label: 'DEF', color: 0x4dd0e1, description: 'DEF：自機の最大HPが増える。ステージ開始・クリア時に全回復する。' },
-  { key: 'dex', label: 'DEX', color: 0x9d7bff, description: 'DEX：後方弾が1発増える。複数になると扇状に広がって発射される。' },
+  { key: 'dex', label: 'DEX', color: 0x9d7bff, description: 'DEX：被弾した際の無敵時間が伸びる。連続被弾からの生存率が上がる。' },
 ];
 
 const MAX_LEVEL = STATUS_MAX_LEVEL;
@@ -143,9 +143,12 @@ export class StatusScene extends Phaser.Scene {
   // ヘッダー・サマリー・マスコット
   // ---------------------------------------------------------------------
 
+  /** 消えかけの蛍光灯看板をイメージしたネオン管風フォント（Google Fonts「Stick」。日本語グリフあり） */
+  private static readonly NEON_FONT_FAMILY = "'Stick', 'M PLUS 1p', 'Yu Gothic', 'Meiryo', sans-serif";
+
   private createHeader(): void {
     const titleMap: Record<StatusSceneData['mode'], string> = {
-      gameStart: 'ガレージケロ',
+      gameStart: 'ケロコガレージ',
       stageClear: `NEXT STAGE ${this.sceneData.stageNumber ?? ''}`,
     };
 
@@ -153,20 +156,79 @@ export class StatusScene extends Phaser.Scene {
     titleBack.fillStyle(0x0d4fa6, 0.35);
     titleBack.fillRoundedRect(GAME_CONFIG.WIDTH / 2 - 220, 12, 440, 46, 10);
 
-    this.add.text(GAME_CONFIG.WIDTH / 2, 35, titleMap[this.sceneData.mode], {
+    const isGameStart = this.sceneData.mode === 'gameStart';
+    const title = titleMap[this.sceneData.mode];
+    const titleText = this.add.text(GAME_CONFIG.WIDTH / 2, 35, title, {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '28px',
-      color: '#f8f7f2',
+      fontSize: isGameStart ? '32px' : '28px',
+      color: isGameStart ? '#a19361' : '#f8f7f2', // 油色（日本の伝統色）
       fontStyle: 'bold',
       stroke: '#0f172a',
       strokeThickness: 6,
     }).setOrigin(0.5).setDepth(2);
+
+    if (isGameStart) {
+      this.scheduleNeonFlicker(titleText);
+      // CanvasテキストはDOM上のテキストと違いWebフォントの自動読み込みをトリガーしないため、
+      // (特にGoogle FontsのCJKサブセットは)明示的にロードしてから差し替える。
+      this.loadNeonFont(title).then(() => {
+        if (titleText.active) titleText.setFontFamily(StatusScene.NEON_FONT_FAMILY);
+      });
+    }
 
     this.add.text(GAME_CONFIG.WIDTH / 2, 70, 'ステータスポイントを好きなように振り分けて、うさこ号をパワーアップさせよう！', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '13px',
       color: '#a9d6e5',
     }).setOrigin(0.5).setDepth(2);
+  }
+
+  /**
+   * Canvasへのテキスト描画はDOM表示と違いWebフォントの読み込みを自動トリガーしないため、
+   * CSS Font Loading APIで明示的にロードする。Google FontsのCJKはUnicode範囲ごとの
+   * サブセットに分割されているため、実際に表示する文字列を渡して該当サブセットを読ませる。
+   */
+  private async loadNeonFont(sampleText: string): Promise<void> {
+    try {
+      await document.fonts.load(`700 32px "Stick"`, sampleText);
+    } catch (e) {
+      console.warn('Failed to load neon font', e);
+    }
+  }
+
+  /** 消えかけの蛍光灯のように、不規則な間隔で1〜3回すばやく明滅させ続ける演出。 */
+  private scheduleNeonFlicker(text: Phaser.GameObjects.Text): void {
+    const nextDelay = Phaser.Math.Between(200, 2400);
+    this.time.delayedCall(nextDelay, () => {
+      if (!text.active) return;
+      this.playNeonFlickerBurst(text, () => this.scheduleNeonFlicker(text));
+    });
+  }
+
+  private playNeonFlickerBurst(text: Phaser.GameObjects.Text, onComplete: () => void): void {
+    const dips = Phaser.Math.Between(1, 3);
+    let completed = 0;
+
+    const runDip = () => {
+      if (!text.active) return;
+      this.tweens.add({
+        targets: text,
+        alpha: Phaser.Math.FloatBetween(0.15, 0.45),
+        duration: Phaser.Math.Between(25, 70),
+        ease: 'Linear',
+        yoyo: true,
+        onComplete: () => {
+          completed += 1;
+          if (completed < dips) {
+            this.time.delayedCall(Phaser.Math.Between(30, 90), runDip);
+          } else if (text.active) {
+            text.setAlpha(1);
+            onComplete();
+          }
+        },
+      });
+    };
+    runDip();
   }
 
   private createSummaryPanel(): void {
@@ -525,7 +587,7 @@ export class StatusScene extends Phaser.Scene {
     const left = this.leftArrows[stat]!;
     const right = this.rightArrows[stat]!;
     const canDeallocate = status[stat] > 0;
-    const canAllocate = status.points > 0 && status[stat] < MAX_LEVEL;
+    const canAllocate = status[stat] < MAX_LEVEL && status.points >= costForLevel(status[stat]);
 
     left.setColor(canDeallocate ? '#f8f7f2' : '#3d4d6b');
     left.disableInteractive();
@@ -552,7 +614,13 @@ export class StatusScene extends Phaser.Scene {
         );
       }
     });
-    this.descText.setText(STAT_ROWS[this.selectedRow].description);
+    const selected = STAT_ROWS[this.selectedRow];
+    const status = this.statusManager.getData(this.currentPlayer);
+    const currentLevel = status[selected.key];
+    const costHint = currentLevel >= MAX_LEVEL
+      ? '（MAX）'
+      : `（次のLvまで：${costForLevel(currentLevel)}pt）`;
+    this.descText.setText(`${selected.description}\n${costHint}`);
   }
 
   private finish(): void {
