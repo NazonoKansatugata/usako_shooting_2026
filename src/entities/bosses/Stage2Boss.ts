@@ -109,8 +109,8 @@ export class Stage2Boss extends Boss {
     this.beamInProgress = true;
 
     const players = this.getPlayers();
-    const target = this.nearestPlayer(players);
-    const y = Phaser.Math.Clamp(target.y, Stage2Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage2Boss.BEAM_Y_MARGIN);
+    // 横一直線ビームのy座標は、自機ではなくボス自身のy座標に合わせる
+    const y = Phaser.Math.Clamp(this.y, Stage2Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage2Boss.BEAM_Y_MARGIN);
     const hazard = new Hazard(
       this.scene,
       { kind: 'rect', width: GAME_CONFIG.PLAY_AREA.WIDTH, height: Stage2Boss.BEAM_HEIGHT },
