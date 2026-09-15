@@ -2,6 +2,12 @@
   "id": "stage02",
   "name": "ステージ2",
   "duration": 50000,
+  "enemyImages": {
+    "circle": "assets/picture/enemies/1.png",
+    "dashRetreat": "assets/picture/enemies/2.png",
+    "square": "assets/picture/enemies/neko.png",
+    "triangle": "assets/picture/enemies/akaneko.png"
+  },
   "spawnEvents": [
     {
       "time": 2000,
