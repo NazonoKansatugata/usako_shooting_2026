@@ -1,4 +1,4 @@
-export type GameMode = 'title' | 'playing' | 'stageClear' | 'gameOver' | 'clear';
+export type GameMode = 'title' | 'playing' | 'paused' | 'stageClear' | 'gameOver' | 'clear';
 export type Difficulty = 'normal' | 'hard';
 /** 雑魚敵の見た目・当たり判定の形状。src/entities/enemies/配下の各クラスに対応する。 */
 export type EnemyShape = 'triangle' | 'circle' | 'square' | 'star' | 'straightShooter' | 'dashRetreat';

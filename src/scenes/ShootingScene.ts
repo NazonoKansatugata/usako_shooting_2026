@@ -107,6 +107,8 @@ export class ShootingScene extends Phaser.Scene {
   private banner!: Phaser.GameObjects.Text;
   private instruction!: Phaser.GameObjects.Text;
   private stageClearPanel?: Phaser.GameObjects.Container;
+  private pauseOverlay?: Phaser.GameObjects.Container;
+  private escapeKeyHandler?: (event: KeyboardEvent) => void;
 
   constructor() {
     super('shooting');
@@ -160,9 +162,13 @@ export class ShootingScene extends Phaser.Scene {
       }
     });
 
-    this.input.keyboard!.on('keydown-ESC', () => {
-      this.scene.start('title');
-    });
+    this.escapeKeyHandler = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' && event.code !== 'Escape') return;
+      if (!this.sys.isActive()) return;
+      event.preventDefault();
+      this.togglePauseOrReturnToTitle();
+    };
+    window.addEventListener('keydown', this.escapeKeyHandler, { capture: true });
 
     this.input.keyboard!.on('keydown-T', () => {
       if (this.mode === 'gameOver' || this.mode === 'clear') {
@@ -179,13 +185,32 @@ export class ShootingScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown-J', () => this.debugJumpToStage(2, true));
 
     this.events.once('shutdown', () => {
+      if (this.escapeKeyHandler) {
+        window.removeEventListener('keydown', this.escapeKeyHandler, { capture: true });
+        this.escapeKeyHandler = undefined;
+      }
+      this.time.paused = false;
+      this.tweens.resumeAll();
+      this.physics.resume();
       this.stopBgm();
       this.gameOverTransitionTimer?.remove(false);
       this.gameOverTransitionTimer = undefined;
     });
   }
 
+  private togglePauseOrReturnToTitle(): void {
+    if (this.mode === 'playing') {
+      this.pauseGame();
+    } else if (this.mode === 'paused') {
+      this.resumeGame();
+    } else {
+      this.scene.start('title');
+    }
+  }
+
   update(_time: number, delta: number): void {
+    if (this.mode === 'paused') return;
+
     this.drawBackground(delta);
 
     // 下画面の戦況モニターはゲームモードに関わらず（あるいはplaying時に）常時更新
@@ -343,6 +368,67 @@ export class ShootingScene extends Phaser.Scene {
     this.updateHud();
 
     if (this.twoPlayer) this.showTwoPlayerControlHint();
+  }
+
+  private pauseGame(): void {
+    if (this.mode !== 'playing') return;
+    this.mode = 'paused';
+    this.physics.pause();
+    this.time.paused = true;
+    this.tweens.pauseAll();
+    this.stageBgm?.pause();
+    this.bossBgm?.pause();
+    this.showPauseOverlay();
+  }
+
+  private resumeGame(): void {
+    if (this.mode !== 'paused') return;
+    this.hidePauseOverlay();
+    this.mode = 'playing';
+    this.physics.resume();
+    this.time.paused = false;
+    this.tweens.resumeAll();
+    if (this.stageBgm?.isPaused) this.stageBgm.resume();
+    if (this.bossBgm?.isPaused) this.bossBgm.resume();
+  }
+
+  private showPauseOverlay(): void {
+    this.hidePauseOverlay();
+
+    const overlay = this.add.container(0, 0).setDepth(60);
+    this.pauseOverlay = overlay;
+
+    overlay.add(this.add.rectangle(
+      0,
+      0,
+      GAME_CONFIG.WIDTH,
+      GAME_CONFIG.PLAY_AREA.HEIGHT,
+      0x050914,
+      0.56,
+    ).setOrigin(0));
+
+    overlay.add(this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 18, 'PAUSE', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '48px',
+      color: '#f8f7f2',
+      fontStyle: 'bold',
+      stroke: '#07111f',
+      strokeThickness: 7,
+    }).setOrigin(0.5));
+
+    overlay.add(this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 + 44, 'ESC：ゲームに戻る', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '18px',
+      color: '#a9d6e5',
+      stroke: '#07111f',
+      strokeThickness: 4,
+    }).setOrigin(0.5));
+  }
+
+  private hidePauseOverlay(): void {
+    if (!this.pauseOverlay) return;
+    this.pauseOverlay.destroy(true);
+    this.pauseOverlay = undefined;
   }
 
   private showTwoPlayerControlHint(): void {
