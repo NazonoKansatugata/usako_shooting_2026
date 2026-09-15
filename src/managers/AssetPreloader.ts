@@ -8,6 +8,11 @@ const STAGE1_IMAGES: readonly ImageAsset[] = [
   ['player-wing-1', 'assets/picture/player/DefineSprite_149/1.png'],
   ['player-wing-3', 'assets/picture/player/DefineSprite_149/3.png'],
   ['player-hit', 'assets/picture/player/DefineSprite_168/90.png'],
+  // 2人プレイ時のP2用（ねここ色）
+  ['player2-base', 'assets/picture/player/DefineSprite_174/1.png'],
+  ['player2-wing-1', 'assets/picture/player/DefineSprite_178/1.png'],
+  ['player2-wing-3', 'assets/picture/player/DefineSprite_178/3.png'],
+  ['player2-hit', 'assets/picture/player/DefineSprite_183/90.png'],
   ['dialogue-usako', 'assets/picture/player/DefineSprite_44/1.png'],
   ['dialogue-nekoko', 'assets/picture/player/DefineSprite_54/1.png'],
   ['dialogue-keroko', 'assets/picture/player/DefineSprite_190/4.png'],
