@@ -35,12 +35,32 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   public preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
-    this.wingSprite.setPosition(this.x, this.y - 3 * Player.SCALE);
+
+    const rad = this.rotation;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    // 羽のオフセット (基準スケール時の相対座標: x=0, y=-3*SCALE) を現在のスケールと回転に合わせて計算
+    const wingLocalX = 0;
+    const wingLocalY = -3 * (this.scaleY / Player.SCALE) * Player.SCALE;
+    const wingWorldX = this.x + (wingLocalX * cos - wingLocalY * sin);
+    const wingWorldY = this.y + (wingLocalX * sin + wingLocalY * cos);
+
+    this.wingSprite.setPosition(wingWorldX, wingWorldY);
     this.wingSprite.setRotation(this.rotation);
+    this.wingSprite.setScale(this.scaleX, this.scaleY);
     this.wingSprite.setAlpha(this.alpha);
     this.wingSprite.setVisible(this.visible);
-    this.airCannon.setPosition(this.x + 15 * Player.SCALE, this.y + 4 * Player.SCALE);
+
+    // 空気砲のオフセット (基準スケール時の相対座標: x=15*SCALE, y=4*SCALE) を現在のスケールと回転に合わせて計算
+    const cannonLocalX = 15 * (this.scaleX / Player.SCALE) * Player.SCALE;
+    const cannonLocalY = 4 * (this.scaleY / Player.SCALE) * Player.SCALE;
+    const cannonWorldX = this.x + (cannonLocalX * cos - cannonLocalY * sin);
+    const cannonWorldY = this.y + (cannonLocalX * sin + cannonLocalY * cos);
+
+    this.airCannon.setPosition(cannonWorldX, cannonWorldY);
     this.airCannon.setRotation(this.rotation);
+    this.airCannon.setScale(this.scaleX, this.scaleY);
     this.airCannon.setAlpha(this.alpha);
     this.airCannon.setVisible(this.visible);
   }
@@ -56,6 +76,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this._isInvulnerable;
   }
 
+  public setInvulnerable(value: boolean): void {
+    this._isInvulnerable = value;
+  }
+
   get hp(): number {
     return this._hp;
   }
@@ -65,8 +89,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this._isInvulnerable = false;
     this.isDying = false;
     this.setAlpha(1);
+    this.setScale(Player.SCALE);
+    this.setAngle(0);
     this.setActive(true);
     this.setVisible(true);
+    this.wingSprite.setVisible(true);
+    this.wingSprite.setAlpha(1);
+    this.wingSprite.setScale(Player.SCALE);
+    this.airCannon.setVisible(true);
+    this.airCannon.setAlpha(1);
+    this.airCannon.setScale(Player.SCALE);
     (this.body as Phaser.Physics.Arcade.Body).enable = true;
     this.hitSprite.setVisible(false);
   }
@@ -113,6 +145,35 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       onComplete: () => {
         this.hitSprite.setVisible(false);
         this.setActive(false);
+        onComplete?.();
+      },
+    });
+  }
+
+  /**
+   * ボス討伐後、隕石の中心へ回転・縮小しながら吸い込まれ、完全に消える演出
+   */
+  public startSuckInAnimation(targetX: number, targetY: number, duration: number, onComplete?: () => void): void {
+    if (this.isDying) return;
+    this.isDying = true;
+    this.setVelocity(0, 0);
+    (this.body as Phaser.Physics.Arcade.Body).enable = false;
+
+    this.scene.tweens.add({
+      targets: this,
+      x: targetX,
+      y: targetY,
+      scaleX: 0,
+      scaleY: 0,
+      angle: 1080,
+      alpha: 0,
+      duration,
+      ease: 'Cubic.easeIn',
+      onComplete: () => {
+        this.setVisible(false);
+        this.setActive(false);
+        this.wingSprite.setVisible(false);
+        this.airCannon.setVisible(false);
         onComplete?.();
       },
     });

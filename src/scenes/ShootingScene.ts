@@ -67,6 +67,7 @@ export class ShootingScene extends Phaser.Scene {
   private stageTime = 0;
   private fireTimer = 0;
   private bossPreEventTriggered = false;
+  private bossDefeated = false;
   private score = 0;
   private static readonly SCORE_ENEMY_DEFEAT = 100;
   private static readonly SCORE_BOSS_DEFEAT = 3000;
@@ -101,6 +102,7 @@ export class ShootingScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private banner!: Phaser.GameObjects.Text;
   private instruction!: Phaser.GameObjects.Text;
+  private stageClearPanel?: Phaser.GameObjects.Container;
 
   constructor() {
     super('shooting');
@@ -185,6 +187,11 @@ export class ShootingScene extends Phaser.Scene {
 
     if (this.mode !== 'playing') return;
 
+    if (this.bossDefeated) {
+      this.updateHud();
+      return;
+    }
+
     // イベント再生中（ステージ開始直後演出・イベント進捗率停止・ボス前演出）はステージ進行率の加算を止める
     const progressBlocked = this.storyManager.isBlockingProgress();
     if (!progressBlocked) {
@@ -259,11 +266,13 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private startGame(): void {
+    this.hideStageClearPanel();
     this.mode = 'playing';
     this.stageManager.reset();
     this.stageTime = 0;
     this.fireTimer = 0;
     this.bossPreEventTriggered = false;
+    this.bossDefeated = false;
     this.score = 0;
 
     if (this.boss?.active) this.boss.destroy();
@@ -299,7 +308,7 @@ export class ShootingScene extends Phaser.Scene {
     this.updateHud();
   }
 
-  /** ボス撃破後、次ステージへ進む前にリザルトを表示してプレイヤーの入力を待つ。 */
+  /** ボス撃破後、次ステージへ進む前に見やすいリザルトカードを表示してプレイヤーの入力を待つ。 */
   private enterStageClear(clearedStage: number): void {
     this.mode = 'stageClear';
     this.stopBgm();
@@ -321,23 +330,180 @@ export class ShootingScene extends Phaser.Scene {
     const hp = Math.max(0, this.player.hp);
     this.saveManager.reportStageCleared(clearedStage, this.settingsManager.difficulty);
 
-    this.banner.setText(`STAGE ${clearedStage} CLEAR`).setVisible(true);
-    this.instruction.setText(
-      `クリアタイム：${clearSeconds}秒　　残りHP：${hp}/${GAME_CONFIG.PLAYER_HP}\n\nENTER：次のステージへ`,
-    ).setVisible(true);
+    this.banner.setVisible(false);
+    this.instruction.setVisible(false);
+    this.showStageClearPanel(clearedStage, clearSeconds, hp);
+  }
+
+  /** 近未来SF風の洗練されたステージクリアリザルトパネルを生成・表示 */
+  private showStageClearPanel(clearedStage: number, clearSeconds: string, hp: number): void {
+    this.hideStageClearPanel();
+
+    const panel = this.add.container(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2).setDepth(25);
+    this.stageClearPanel = panel;
+
+    const g = this.add.graphics();
+    panel.add(g);
+
+    const w = 580;
+    const h = 300;
+    const halfW = w / 2;
+    const halfH = h / 2;
+
+    // パネル外枠シャドウ & 背景
+    g.fillStyle(0x0a1128, 0.96);
+    g.fillRoundedRect(-halfW, -halfH, w, h, 14);
+    g.lineStyle(2, 0x4cc9f0, 0.9);
+    g.strokeRoundedRect(-halfW, -halfH, w, h, 14);
+
+    // ヘッダー上部帯
+    g.fillStyle(0x12263a, 1);
+    g.fillRoundedRect(-halfW + 2, -halfH + 2, w - 4, 52, { tl: 12, tr: 12, bl: 0, br: 0 });
+    // ヘッダー区切り線 (ゴールド)
+    g.fillStyle(0xffd166, 1);
+    g.fillRect(-halfW + 20, -halfH + 54, w - 40, 2);
+
+    // 3連スタッツカードの背景スロット
+    const cardW = 166;
+    const cardH = 96;
+    const cardY = -78;
+    const cardXs = [-260, -83, 94];
+
+    for (const cx of cardXs) {
+      g.fillStyle(0x0e1f38, 0.95);
+      g.fillRoundedRect(cx, cardY, cardW, cardH, 8);
+      g.lineStyle(1, 0x224a73, 0.9);
+      g.strokeRoundedRect(cx, cardY, cardW, cardH, 8);
+    }
+
+    // フッターガイド帯
+    g.fillStyle(0x102844, 0.9);
+    g.fillRoundedRect(-halfW + 30, 48, w - 60, 44, 8);
+    g.lineStyle(1, 0x2b6cb0, 0.8);
+    g.strokeRoundedRect(-halfW + 30, 48, w - 60, 44, 8);
+
+    // タイトルテキスト
+    const titleText = this.add.text(0, -halfH + 27, `★ STAGE ${clearedStage} CLEAR ★`, {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '24px',
+      color: '#ffd166',
+      fontStyle: 'bold',
+      stroke: '#060d1b',
+      strokeThickness: 4,
+    }).setOrigin(0.5);
+    panel.add(titleText);
+
+    // カード1: クリアタイム
+    const timeLabel = this.add.text(cardXs[0] + cardW / 2, cardY + 20, '⏱ CLEAR TIME', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '13px',
+      color: '#a9d6e5',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    const timeValue = this.add.text(cardXs[0] + cardW / 2, cardY + 58, `${clearSeconds}s`, {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '24px',
+      color: '#72efdd',
+      fontStyle: 'bold',
+      stroke: '#060d1b',
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+    panel.add(timeLabel);
+    panel.add(timeValue);
+
+    // カード2: 残りHP
+    const hpLabel = this.add.text(cardXs[1] + cardW / 2, cardY + 20, '💖 SURVIVAL HP', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '13px',
+      color: '#a9d6e5',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    const hpValue = this.add.text(cardXs[1] + cardW / 2, cardY + 58, `${hp} / ${GAME_CONFIG.PLAYER_HP}`, {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '24px',
+      color: '#ffd166',
+      fontStyle: 'bold',
+      stroke: '#060d1b',
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+    panel.add(hpLabel);
+    panel.add(hpValue);
+
+    // カード3: スコア
+    const scoreLabel = this.add.text(cardXs[2] + cardW / 2, cardY + 20, '🏆 SCORE', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '13px',
+      color: '#a9d6e5',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    const scoreValue = this.add.text(cardXs[2] + cardW / 2, cardY + 58, `${this.score.toLocaleString()}`, {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '22px',
+      color: '#f6d365',
+      fontStyle: 'bold',
+      stroke: '#060d1b',
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+    panel.add(scoreLabel);
+    panel.add(scoreValue);
+
+    // フッター操作案内（パルス点滅）
+    const promptText = this.add.text(0, 70, '▶ [ ENTER ] を押して次のステージへ ◀', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '17px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#060d1b',
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+    panel.add(promptText);
+
+    this.tweens.add({
+      targets: promptText,
+      alpha: 0.4,
+      duration: 750,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    // パネル出現アニメーション
+    panel.setScale(0.85);
+    panel.setAlpha(0);
+    this.tweens.add({
+      targets: panel,
+      scale: 1,
+      alpha: 1,
+      duration: 350,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  private hideStageClearPanel(): void {
+    if (this.stageClearPanel) {
+      this.stageClearPanel.destroy(true);
+      this.stageClearPanel = undefined;
+    }
   }
 
   private startNextStage(): void {
+    this.hideStageClearPanel();
     this.mode = 'playing';
     this.stageTime = 0;
     this.fireTimer = 0;
     this.bossPreEventTriggered = false;
+    this.bossDefeated = false;
     this.boss = undefined;
     this.forEachEnemyGroup((group) => group.clear(true, true));
     this.enemyBullets.clear(true, true);
     this.enemyHomingBullets.clear(true, true);
     this.enemyWaveBullets.clear(true, true);
     this.bossBallBullets.clear(true, true);
+
+    if (this.player?.active) {
+      this.player.resetStats();
+      this.player.setPosition(130, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
+    }
 
     this.banner.setVisible(false);
     this.instruction.setVisible(false);
@@ -349,12 +515,14 @@ export class ShootingScene extends Phaser.Scene {
 
   /** デバッグ用：指定ステージ（0始まり）へ直接ジャンプする。toBoss=trueならそのステージのボス戦へ即座に突入する。 */
   private debugJumpToStage(stageIndex: number, toBoss = false): void {
+    this.hideStageClearPanel();
     this.mode = 'playing';
     this.stopBgm();
     this.stageManager.jumpToStage(stageIndex);
     this.stageTime = 0;
     this.fireTimer = 0;
     this.bossPreEventTriggered = false;
+    this.bossDefeated = false;
 
     if (this.boss?.active) this.boss.destroy();
     this.boss = undefined;
@@ -603,24 +771,150 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private hitBoss(object1: any, object2: any): void {
+    if (this.bossDefeated) return;
     const bullet = (object1 === this.boss) ? object2 : object1;
     if (!bullet || !bullet.active || !this.boss || !this.boss.active) return;
     bullet.disableBody(true, true);
     const defeated = this.boss.takeDamage(1);
     if (defeated) {
+      this.bossDefeated = true;
       this.score += ShootingScene.SCORE_BOSS_DEFEAT;
       // takeDamage()内でactiveが即falseになりupdateHud()の分岐に乗らなくなるため、撃破時点のHPを明示的に0で反映する
       this.progressText.setText(`BOSS  0 / ${this.stageManager.current.boss.hp}`);
       this.scoreText.setText(`SCORE  ${this.score}`);
+
+      // ボス撃破直後：敵弾・雑魚敵を一掃し、自機を無敵化して被弾事故を防ぐ
+      if (this.player?.active) {
+        this.player.setInvulnerable(true);
+        this.player.setVelocity(0, 0);
+      }
+      this.bullets.clear(true, true);
+      this.forEachEnemyGroup((group) => group.clear(true, true));
+      this.enemyBullets.clear(true, true);
+      this.enemyHomingBullets.clear(true, true);
+      this.enemyWaveBullets.clear(true, true);
+      this.bossBallBullets.clear(true, true);
+      this.stopBgm();
+
       const clearedStage = this.stageManager.stageNumber;
-      this.storyManager.triggerBossDefeatEvent(() => {
+      const bx = this.boss.x;
+      const by = this.boss.y;
+
+      // 1. ボス大爆発演出
+      this.playBossExplosion(bx, by, () => {
+        // 2. ボス撃破後シナリオ（StoryManager）を確実に最後まで再生
+        this.storyManager.triggerBossDefeatEvent(
+          () => {
+            // 3. 全会話完了後：隕石発光＆吸い込まれ演出 -> クリア画面へ
+            this.playSuckInAndClearSequence(clearedStage);
+          },
+          (item) => {
+            if (item.speaker === '演出' || item.text.includes('光')) {
+              this.playMeteorGlowEffect();
+            }
+          },
+        );
+      });
+    }
+  }
+
+  /** ボス撃破時の迫力ある連続大爆発演出 */
+  private playBossExplosion(x: number, y: number, onComplete: () => void): void {
+    const explosionCount = 8;
+    this.cameras.main.shake(700, 0.018);
+
+    for (let i = 0; i < explosionCount; i++) {
+      this.time.delayedCall(i * 80, () => {
+        const offsetX = Phaser.Math.Between(-55, 55);
+        const offsetY = Phaser.Math.Between(-40, 40);
+        const radius = Phaser.Math.Between(25, 55);
+
+        const boom = this.add.circle(x + offsetX, y + offsetY, radius, 0xff7b00, 0.9).setDepth(8);
+        const core = this.add.circle(x + offsetX, y + offsetY, radius * 0.55, 0xffffff, 1).setDepth(9);
+
+        this.tweens.add({
+          targets: [boom, core],
+          scale: 1.6,
+          alpha: 0,
+          duration: 350,
+          ease: 'Quad.easeOut',
+          onComplete: () => {
+            boom.destroy();
+            core.destroy();
+          },
+        });
+
+        if (i % 2 === 0) {
+          this.sound.play('se_enemy_defeat', { volume: 0.6 });
+        }
+      });
+    }
+
+    // クライマックスの特大爆発
+    this.time.delayedCall(explosionCount * 80 + 100, () => {
+      const bigBoom = this.add.circle(x, y, 85, 0xffd166, 0.95).setDepth(8);
+      const flash = this.add.circle(x, y, 115, 0xffffff, 1).setDepth(9);
+      this.sound.play('se_enemy_defeat', { volume: 0.8 });
+      this.cameras.main.flash(350, 255, 255, 255);
+
+      this.tweens.add({
+        targets: [bigBoom, flash],
+        scale: 2.2,
+        alpha: 0,
+        duration: 500,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          bigBoom.destroy();
+          flash.destroy();
+          onComplete();
+        },
+      });
+    });
+  }
+
+  /** 「隕石が光る」シナリオ連動の発光演出 */
+  private playMeteorGlowEffect(): void {
+    this.cameras.main.flash(600, 255, 255, 255);
+    const centerX = GAME_CONFIG.PLAY_AREA.WIDTH / 2;
+    const centerY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
+
+    const glow = this.add.circle(centerX, centerY, 70, 0x4cc9f0, 0.6).setDepth(7);
+    const glowCore = this.add.circle(centerX, centerY, 35, 0xffffff, 0.9).setDepth(7);
+
+    this.tweens.add({
+      targets: [glow, glowCore],
+      scale: 3.8,
+      alpha: 0,
+      duration: 1300,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        glow.destroy();
+        glowCore.destroy();
+      },
+    });
+  }
+
+  /** 「吸い込まれるウサー！」後のストーリー吸い込み＆ホワイトアウトクリア演出 */
+  private playSuckInAndClearSequence(clearedStage: number): void {
+    const targetX = GAME_CONFIG.PLAY_AREA.WIDTH / 2;
+    const targetY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
+
+    // 自機本体と羽・空気砲を一緒に中心へ回転・縮小しながら吸い込み
+    if (this.player?.active) {
+      this.player.startSuckInAnimation(targetX, targetY, 1100);
+    }
+
+    // 強烈なホワイトアウトで次のステージ/リザルトへ移行
+    this.cameras.main.fade(1200, 255, 255, 255, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
+      if (progress === 1) {
         if (this.stageManager.advance()) {
           this.enterStageClear(clearedStage);
         } else {
           this.finish('clear');
         }
-      });
-    }
+        this.cameras.main.fadeIn(600, 255, 255, 255);
+      }
+    });
   }
 
   private hitPlayer(object1: any, object2: any): void {
@@ -648,6 +942,7 @@ export class ShootingScene extends Phaser.Scene {
   private finish(mode: 'clear' | 'gameOver'): void {
     // 残った重なり判定や死亡演出中の接触から終了処理が重複しないようにする。
     if (this.mode !== 'playing') return;
+    this.hideStageClearPanel();
     this.mode = mode;
     this.stopBgm();
     if (this.player?.active) this.player.setVelocity(0, 0);
