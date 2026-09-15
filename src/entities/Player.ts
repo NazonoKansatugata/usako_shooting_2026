@@ -256,7 +256,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.showHitImage();
 
-    // 被弾後の無敵時間（約1.2秒間、点滅演出）
+    // 被弾後の無敵時間（基本は約1.2秒間の点滅演出。DEXレベルに応じて点滅回数=時間が伸びる）
+    const dexLevel = StatusManager.getInstance().getData(this.variant).dex;
+    const invulnRepeat = 5 + dexLevel * GAME_CONFIG.DEX_INVULN_REPEAT_PER_LEVEL;
     this._isInvulnerable = true;
     this.scene.tweens.add({
       targets: this,
@@ -264,7 +266,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       duration: 100,
       ease: 'Linear',
       yoyo: true,
-      repeat: 5,
+      repeat: invulnRepeat,
       onComplete: () => {
         if (this.active) {
           this.setAlpha(1);

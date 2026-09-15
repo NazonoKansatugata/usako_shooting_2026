@@ -6,6 +6,7 @@ import { Boss } from '../entities/bosses/Boss';
 import { Stage1Boss } from '../entities/bosses/Stage1Boss';
 import { Stage2Boss } from '../entities/bosses/Stage2Boss';
 import { Stage3Boss } from '../entities/bosses/Stage3Boss';
+import { Stage4Boss } from '../entities/bosses/Stage4Boss';
 import { Bullet } from '../entities/Bullet';
 import { HomingBullet } from '../entities/HomingBullet';
 import { WaveBullet } from '../entities/WaveBullet';
@@ -29,6 +30,11 @@ interface CloudFlow {
   y: number;
   scale: number;
   alpha: number;
+}
+
+interface PauseMenuItem {
+  text: string;
+  action: () => void;
 }
 
 export class ShootingScene extends Phaser.Scene {
@@ -73,6 +79,17 @@ export class ShootingScene extends Phaser.Scene {
   private fireTimer2 = 0;
   private bossPreEventTriggered = false;
   private bossDefeated = false;
+  /** 高難易度でステージ3クリア後、ボーナスステージ4（ボス戦）への案内を出す予定かどうか */
+  private bonusBossPending = false;
+  /** 高難易度でゲーム開始した場合、create()完了後に即ステージ4ボス戦へ突入する予定かどうか */
+  private pendingBonusStageStart = false;
+  /** 現在ボーナスステージ4のボス戦中かどうか（再度ボーナス提案しないための判定にも使う） */
+  private isBonusBossFight = false;
+  /** ボーナスボスのみステージJSON外のHPを使うため、bossMaxHp計算用に個別保持する */
+  private bonusBossMaxHp?: number;
+  private static readonly BONUS_BOSS_HP = 130;
+  private static readonly BONUS_BOSS_BULLET_INTERVAL = 900;
+  private static readonly BONUS_BOSS_BULLET_SPEED = 300;
   private score = 0;
   private static readonly SCORE_ENEMY_DEFEAT = 100;
   private static readonly SCORE_BOSS_DEFEAT = 3000;
@@ -110,14 +127,21 @@ export class ShootingScene extends Phaser.Scene {
   private instruction!: Phaser.GameObjects.Text;
   private stageClearPanel?: Phaser.GameObjects.Container;
   private pauseOverlay?: Phaser.GameObjects.Container;
+  private pauseSelectedIndex = 0;
+  private pauseMenuItems: PauseMenuItem[] = [];
+  private pauseMenuTexts: Phaser.GameObjects.Text[] = [];
+  private pauseMenuBackplates: Phaser.GameObjects.Graphics[] = [];
+  private pauseMenuHitAreas: Phaser.GameObjects.Zone[] = [];
+  private pauseCursorIcon?: Phaser.GameObjects.Text;
   private escapeKeyHandler?: (event: KeyboardEvent) => void;
 
   constructor() {
     super('shooting');
   }
 
-  init(data?: { twoPlayer?: boolean }): void {
+  init(data?: { twoPlayer?: boolean; startAtBonusStage?: boolean }): void {
     this.twoPlayer = data?.twoPlayer ?? false;
+    this.pendingBonusStageStart = data?.startAtBonusStage ?? false;
   }
 
   preload(): void {
@@ -149,6 +173,12 @@ export class ShootingScene extends Phaser.Scene {
 
     this.createHud();
     this.startGame();
+    // 高難易度でゲーム開始した場合は、通常のステージ1からではなく即ボーナスステージ4のボス戦へ突入する。
+    // startBonusBossStage()はstartGame()が作った雑魚敵・BGM等をリセットし直すので順序はこれでよい。
+    if (this.pendingBonusStageStart) {
+      this.pendingBonusStageStart = false;
+      this.startBonusBossStage();
+    }
 
     // プレイ開始後に次の遷移先の素材をロードし、ゲーム進行を止めない。
     this.time.delayedCall(500, () => {
@@ -157,9 +187,11 @@ export class ShootingScene extends Phaser.Scene {
     });
 
     // ステージクリア後のステータス画面（'status'シーン）が完了すると本シーンがresumeされる。
-    // その時点で次ステージ開始処理を行う。
+    // その時点で次ステージ（またはボーナスステージ4のボス戦）開始処理を行う。
     this.events.on('resume', () => {
-      if (this.mode === 'stageClear') this.startNextStage();
+      if (this.mode !== 'stageClear') return;
+      if (this.bonusBossPending) this.startBonusBossStage();
+      else this.startNextStage();
     });
 
     this.input.keyboard!.on('keydown-ENTER', () => {
@@ -169,7 +201,7 @@ export class ShootingScene extends Phaser.Scene {
           mode: 'stageClear',
           twoPlayer: this.twoPlayer,
           score: this.score,
-          stageNumber: this.stageManager.stageNumber,
+          stageNumber: this.bonusBossPending ? 4 : this.stageManager.stageNumber,
         });
       } else if (this.mode === 'gameOver' || this.mode === 'clear') {
         this.startGame();
@@ -190,6 +222,13 @@ export class ShootingScene extends Phaser.Scene {
       }
     });
 
+    this.input.keyboard!.on('keydown-UP', () => this.navigatePauseMenu(-1));
+    this.input.keyboard!.on('keydown-W', () => this.navigatePauseMenu(-1));
+    this.input.keyboard!.on('keydown-DOWN', () => this.navigatePauseMenu(1));
+    this.input.keyboard!.on('keydown-S', () => this.navigatePauseMenu(1));
+    this.input.keyboard!.on('keydown-ENTER', () => this.executePauseMenuItem());
+    this.input.keyboard!.on('keydown-SPACE', () => this.executePauseMenuItem());
+
     // デバッグ用：1/2/3でステージ1/2/3の先頭へ、G/H/Jでそれぞれのボス戦へ直接ジャンプする
     this.input.keyboard!.on('keydown-ONE', () => this.debugJumpToStage(0));
     this.input.keyboard!.on('keydown-TWO', () => this.debugJumpToStage(1));
@@ -205,7 +244,12 @@ export class ShootingScene extends Phaser.Scene {
       }
       this.time.paused = false;
       this.tweens.resumeAll();
-      this.physics.resume();
+      // Arcade Physicsプラグイン自身のshutdown処理（this.physics.worldの破棄）は
+      // シーン起動時に登録されるため、create()内で登録した本ハンドラより先に走る。
+      // そのため通常のゲームオーバー等によるシーン終了時にはthis.physics.worldが
+      // 既にnullになっており、無条件にresume()を呼ぶと例外を投げてシーン遷移処理自体を
+      // 中断させ、ゲームオーバー画面が出ないままフリーズする原因になっていた。
+      if (this.physics.world) this.physics.resume();
       this.stopBgm();
       this.gameOverTransitionTimer?.remove(false);
       this.gameOverTransitionTimer = undefined;
@@ -333,6 +377,9 @@ export class ShootingScene extends Phaser.Scene {
     this.fireTimer2 = 0;
     this.bossPreEventTriggered = false;
     this.bossDefeated = false;
+    this.bonusBossPending = false;
+    this.isBonusBossFight = false;
+    this.bonusBossMaxHp = undefined;
     this.score = 0;
 
     if (this.boss?.active) this.boss.destroy();
@@ -408,6 +455,10 @@ export class ShootingScene extends Phaser.Scene {
 
   private showPauseOverlay(): void {
     this.hidePauseOverlay();
+    this.pauseSelectedIndex = 0;
+    this.pauseMenuTexts = [];
+    this.pauseMenuBackplates = [];
+    this.pauseMenuHitAreas = [];
 
     const overlay = this.add.container(0, 0).setDepth(60);
     this.pauseOverlay = overlay;
@@ -418,31 +469,166 @@ export class ShootingScene extends Phaser.Scene {
       GAME_CONFIG.WIDTH,
       GAME_CONFIG.PLAY_AREA.HEIGHT,
       0x050914,
-      0.56,
+      0.64,
     ).setOrigin(0));
 
-    overlay.add(this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 18, 'PAUSE', {
+    const panelX = GAME_CONFIG.WIDTH / 2;
+    const panelY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
+    const panelW = 430;
+    const panelH = 260;
+
+    const panel = this.add.graphics();
+    panel.fillStyle(0x07111f, 0.9);
+    panel.fillRoundedRect(panelX - panelW / 2, panelY - panelH / 2, panelW, panelH, 10);
+    panel.lineStyle(2, 0x38bdf8, 0.7);
+    panel.strokeRoundedRect(panelX - panelW / 2, panelY - panelH / 2, panelW, panelH, 10);
+    overlay.add(panel);
+
+    overlay.add(this.add.text(panelX, panelY - 88, 'PAUSE', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '48px',
+      fontSize: '42px',
       color: '#f8f7f2',
       fontStyle: 'bold',
       stroke: '#07111f',
       strokeThickness: 7,
     }).setOrigin(0.5));
 
-    overlay.add(this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 + 44, 'ESC：ゲームに戻る', {
+    this.pauseMenuItems = [
+      {
+        text: 'ゲームに戻る',
+        action: () => this.resumeGame(),
+      },
+      {
+        text: 'タイトルへ戻る',
+        action: () => this.returnToTitleFromPause(),
+      },
+      // 「ステージの最初から再挑戦」は、ここへ項目を追加できるようにしておく。
+    ];
+
+    const startY = panelY - 18;
+    const itemHeight = 54;
+    const btnW = 300;
+
+    this.pauseCursorIcon = this.add.text(panelX - btnW / 2 - 18, startY, '▶', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '18px',
+      fontSize: '20px',
+      color: '#f6d365',
+    }).setOrigin(0.5);
+    overlay.add(this.pauseCursorIcon);
+
+    this.pauseMenuItems.forEach((item, index) => {
+      const y = startY + index * itemHeight;
+      const backplate = this.add.graphics();
+      this.pauseMenuBackplates.push(backplate);
+      overlay.add(backplate);
+
+      const hitArea = this.add.zone(panelX, y, btnW, 44)
+        .setInteractive({ useHandCursor: true });
+      hitArea.on('pointerover', () => {
+        if (this.pauseSelectedIndex === index) return;
+        this.pauseSelectedIndex = index;
+        this.updatePauseMenuSelection();
+        this.playPauseSound('gameOverSelect');
+      });
+      hitArea.on('pointerdown', () => {
+        this.pauseSelectedIndex = index;
+        this.updatePauseMenuSelection();
+        this.executePauseMenuItem();
+      });
+      this.pauseMenuHitAreas.push(hitArea);
+      overlay.add(hitArea);
+
+      const text = this.add.text(panelX, y, item.text, {
+        fontFamily: GAME_CONFIG.FONT_FAMILY,
+        fontSize: '19px',
+        color: '#e2e8f0',
+        stroke: '#0f172a',
+        strokeThickness: 3,
+      }).setOrigin(0.5);
+      this.pauseMenuTexts.push(text);
+      overlay.add(text);
+    });
+
+    overlay.add(this.add.text(panelX, panelY + 104, '↑↓ / WS：選択　ENTER / SPACE / クリック：決定　ESC：ゲームに戻る', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '12px',
       color: '#a9d6e5',
       stroke: '#07111f',
-      strokeThickness: 4,
+      strokeThickness: 3,
     }).setOrigin(0.5));
+
+    this.updatePauseMenuSelection();
   }
 
   private hidePauseOverlay(): void {
     if (!this.pauseOverlay) return;
     this.pauseOverlay.destroy(true);
     this.pauseOverlay = undefined;
+    this.pauseMenuItems = [];
+    this.pauseMenuTexts = [];
+    this.pauseMenuBackplates = [];
+    this.pauseMenuHitAreas = [];
+    this.pauseCursorIcon = undefined;
+  }
+
+  private navigatePauseMenu(delta: number): void {
+    if (this.mode !== 'paused' || this.pauseMenuItems.length === 0) return;
+    this.pauseSelectedIndex = (this.pauseSelectedIndex + delta + this.pauseMenuItems.length) % this.pauseMenuItems.length;
+    this.updatePauseMenuSelection();
+    this.playPauseSound('gameOverSelect');
+  }
+
+  private executePauseMenuItem(): void {
+    if (this.mode !== 'paused') return;
+    const item = this.pauseMenuItems[this.pauseSelectedIndex];
+    if (!item) return;
+    this.playPauseSound('gameOverConfirm');
+    item.action();
+  }
+
+  private updatePauseMenuSelection(): void {
+    if (this.mode !== 'paused' || !this.pauseCursorIcon) return;
+
+    const panelX = GAME_CONFIG.WIDTH / 2;
+    const startY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 18;
+    const itemHeight = 54;
+    const btnW = 300;
+
+    this.pauseCursorIcon.setY(startY + this.pauseSelectedIndex * itemHeight);
+
+    this.pauseMenuTexts.forEach((text, index) => {
+      const y = startY + index * itemHeight;
+      const backplate = this.pauseMenuBackplates[index];
+      if (!backplate || !text) return;
+      backplate.clear();
+
+      if (index === this.pauseSelectedIndex) {
+        text.setColor('#f6d365').setFontSize(21).setStyle({ fontStyle: 'bold' });
+        backplate.fillStyle(0x0d4fa6, 0.92);
+        backplate.fillRoundedRect(panelX - btnW / 2, y - 22, btnW, 44, 8);
+        backplate.lineStyle(2, 0xfacc15, 0.9);
+        backplate.strokeRoundedRect(panelX - btnW / 2, y - 22, btnW, 44, 8);
+      } else {
+        text.setColor('#cbd5e1').setFontSize(19).setStyle({ fontStyle: 'normal' });
+        backplate.fillStyle(0x061a4a, 0.62);
+        backplate.fillRoundedRect(panelX - btnW / 2, y - 22, btnW, 44, 8);
+        backplate.lineStyle(1, 0x1e55b7, 0.45);
+        backplate.strokeRoundedRect(panelX - btnW / 2, y - 22, btnW, 44, 8);
+      }
+    });
+  }
+
+  private returnToTitleFromPause(): void {
+    this.hidePauseOverlay();
+    this.time.paused = false;
+    this.tweens.resumeAll();
+    if (this.physics.world) this.physics.resume();
+    this.stopBgm();
+    this.scene.start('title', { playIntro: false });
+  }
+
+  private playPauseSound(key: string): void {
+    if (this.cache.audio.exists(key)) this.sound.play(key, { volume: this.settingsManager.seVolume / 100 });
   }
 
   private showTwoPlayerControlHint(): void {
@@ -474,9 +660,10 @@ export class ShootingScene extends Phaser.Scene {
     );
   }
 
-  /** 2人プレイ時は基礎HPを2倍にしたボスの最大HP */
+  /** 2人プレイ時は基礎HPを2倍にしたボスの最大HP（ボーナスボスはステージJSON外のHPを使う） */
   private get bossMaxHp(): number {
-    return this.stageManager.current.boss.hp * (this.twoPlayer ? GAME_CONFIG.BOSS_HP_MULTIPLIER_2P : 1);
+    const baseHp = this.bonusBossMaxHp ?? this.stageManager.current.boss.hp;
+    return baseHp * (this.twoPlayer ? GAME_CONFIG.BOSS_HP_MULTIPLIER_2P : 1);
   }
 
   /** ボス撃破後、次ステージへ進む前に見やすいリザルトカードを表示してプレイヤーの入力を待つ。 */
@@ -700,6 +887,45 @@ export class ShootingScene extends Phaser.Scene {
     this.updateHud();
   }
 
+  /**
+   * 高難易度限定のボーナスステージ4。雑魚敵の波は一切なく、開始直後にボス戦へ突入する
+   * （デバッグジャンプのtoBoss=trueと同じ考え方）。StageManagerのステージ数はステージ3の
+   * ままにしておき（stageNumberは変えない）、専用のボスHP・弾設定はScene側で直接持つ。
+   */
+  private startBonusBossStage(): void {
+    this.hideStageClearPanel();
+    this.mode = 'playing';
+    this.isBonusBossFight = true;
+    this.stageTime = 0;
+    this.fireTimer1 = 0;
+    this.fireTimer2 = 0;
+    // ボス戦へ直接突入するため、update()内の「時間経過でボス前イベント発火」処理を無効化しておく
+    this.bossPreEventTriggered = true;
+    this.bossDefeated = false;
+    this.boss = undefined;
+    this.forEachEnemyGroup((group) => group.clear(true, true));
+    this.enemyBullets.clear(true, true);
+    this.enemyHomingBullets.clear(true, true);
+    this.enemyWaveBullets.clear(true, true);
+    this.bossBallBullets.clear(true, true);
+
+    const centerY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
+    this.player1.resetStats();
+    this.player1.setPosition(130, this.twoPlayer ? centerY - 40 : centerY);
+    if (this.twoPlayer && this.player2) {
+      this.player2.resetStats();
+      this.player2.setPosition(130, centerY + 40);
+    }
+
+    this.banner.setVisible(false);
+    this.instruction.setVisible(false);
+
+    // 専用のシナリオは用意しないため、会話・進行イベントの状態を確実にリセットしておく
+    this.storyManager.reset();
+    this.spawnStage4Boss();
+    this.updateHud();
+  }
+
   /** デバッグ用：指定ステージ（0始まり）へ直接ジャンプする。toBoss=trueならそのステージのボス戦へ即座に突入する。 */
   private debugJumpToStage(stageIndex: number, toBoss = false): void {
     this.hideStageClearPanel();
@@ -711,6 +937,9 @@ export class ShootingScene extends Phaser.Scene {
     this.fireTimer2 = 0;
     this.bossPreEventTriggered = false;
     this.bossDefeated = false;
+    this.bonusBossPending = false;
+    this.isBonusBossFight = false;
+    this.bonusBossMaxHp = undefined;
 
     if (this.boss?.active) this.boss.destroy();
     this.boss = undefined;
@@ -765,16 +994,6 @@ export class ShootingScene extends Phaser.Scene {
     this.player2?.move(this.cursors.left.isDown, this.cursors.right.isDown, this.cursors.up.isDown, this.cursors.down.isDown);
   }
 
-  /** 中心角度(rad)を中心に、count本の弾をangleStep(rad)間隔の扇形に均等展開した角度配列を返す。 */
-  private static fanAngles(centerAngle: number, count: number, angleStep: number): number[] {
-    const angles: number[] = [];
-    const offsetStart = -((count - 1) / 2) * angleStep;
-    for (let i = 0; i < count; i++) {
-      angles.push(centerAngle + offsetStart + i * angleStep);
-    }
-    return angles;
-  }
-
   private firePlayerBullet(player: Player, isDown: boolean, slot: 1 | 2): void {
     if (!player.active || !isDown) return;
     const timer = slot === 1 ? this.fireTimer1 : this.fireTimer2;
@@ -782,35 +1001,24 @@ export class ShootingScene extends Phaser.Scene {
     if (slot === 1) this.fireTimer1 = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
     else this.fireTimer2 = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
 
+    // WEP: 弾数・威力は変えず、レベルごとに自弾の見た目と当たり判定を拡大する。
     const status = this.statusManager.getData(player.variant);
-    const angleStep = Phaser.Math.DegToRad(GAME_CONFIG.FAN_ANGLE_STEP_DEG);
-    const speed = GAME_CONFIG.PLAYER_BULLET_SPEED;
-
-    // WEP: 前方弾。1発が基本形で、WEPレベルごとに1発追加され、複数になると扇形に広がる。
-    const forwardCount = 1 + status.wep;
-    for (const angle of ShootingScene.fanAngles(0, forwardCount, angleStep)) {
-      this.firePlayerBulletAt(player.x + 20, player.y, Math.cos(angle) * speed, Math.sin(angle) * speed);
-    }
-
-    // DEX: 後方弾。レベル0では発射せず、レベルごとに1発ずつ増え、複数になると扇形に広がる。
-    if (status.dex > 0) {
-      for (const angle of ShootingScene.fanAngles(Math.PI, status.dex, angleStep)) {
-        this.firePlayerBulletAt(player.x - 20, player.y, Math.cos(angle) * speed, Math.sin(angle) * speed);
-      }
-    }
+    const bulletScale = 1 + status.wep * GAME_CONFIG.WEP_BULLET_SCALE_PER_LEVEL;
+    this.firePlayerBulletAt(player.x + 20, player.y, GAME_CONFIG.PLAYER_BULLET_SPEED, 0, bulletScale);
   }
 
-  private firePlayerBulletAt(x: number, y: number, vx: number, vy: number): void {
+  private firePlayerBulletAt(x: number, y: number, vx: number, vy: number, scale = 1): void {
     let bullet = this.bullets.getFirstDead(false) as Bullet;
     if (!bullet) {
       bullet = new Bullet(this, x, y, 'bullet');
       this.bullets.add(bullet);
     }
-    bullet.fire(x, y, vx, vy);
+    bullet.fire(x, y, vx, vy, scale);
   }
 
   private updateEnemies(): void {
-    if (this.stageTime < this.stageManager.current.duration) {
+    // ボーナスボス戦（ステージ4）は雑魚敵の湧きを一切出さないため、既存ステージのスポーンイベント処理をスキップする。
+    if (!this.isBonusBossFight && this.stageTime < this.stageManager.current.duration) {
       const dueEvents = this.stageManager.collectDueSpawnEvents(this.stageTime);
       for (const event of dueEvents) {
         const fromLeft = event.from === 'left';
@@ -935,6 +1143,44 @@ export class ShootingScene extends Phaser.Scene {
     this.physics.add.overlap(this.bullets, this.boss, this.hitBoss, undefined, this);
     for (const player of this.activePlayers()) {
       this.physics.add.overlap(this.boss, player, this.hitPlayer, undefined, this);
+    }
+  }
+
+  /**
+   * 高難易度ボーナスステージ4のボスを生成する。ステージJSONを持たないため、
+   * HP・弾設定はShootingScene側の定数（BONUS_BOSS_*）を直接使う。
+   * 本体のみ自弾との当たり判定（hitBoss）を持ち、分身2体は自機との接触のみ危険。
+   */
+  private spawnStage4Boss(): void {
+    const bx = GAME_CONFIG.WIDTH - 100;
+    const by = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
+    const hitPlayer = this.hitPlayer.bind(this);
+    const getPlayers = () => this.activePlayers();
+
+    const boss = new Stage4Boss(
+      this, bx, by, getPlayers, this.enemyBullets,
+      ShootingScene.BONUS_BOSS_BULLET_INTERVAL, ShootingScene.BONUS_BOSS_BULLET_SPEED,
+    );
+    this.boss = boss;
+    this.bonusBossMaxHp = ShootingScene.BONUS_BOSS_HP;
+    boss.spawn(bx, by, this.bossMaxHp);
+
+    this.stopBgm();
+    const alertSound = this.sound.add('se_boss_alert', { volume: this.seVolume(0.7) });
+    alertSound.once('complete', () => {
+      if (this.mode === 'playing' && this.boss?.active) this.playBossBgm();
+    });
+    alertSound.play();
+
+    this.banner.setText('BOSS INCOMING').setVisible(true);
+    this.time.delayedCall(1300, () => this.banner.setVisible(false));
+
+    this.physics.add.overlap(this.bullets, this.boss, this.hitBoss, undefined, this);
+    for (const player of this.activePlayers()) {
+      this.physics.add.overlap(this.boss, player, hitPlayer, undefined, this);
+      for (const clone of boss.clones) {
+        this.physics.add.overlap(clone, player, hitPlayer, undefined, this);
+      }
     }
   }
 
@@ -1162,6 +1408,11 @@ export class ShootingScene extends Phaser.Scene {
     this.cameras.main.fade(1200, 255, 255, 255, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress === 1) {
         if (this.stageManager.advance()) {
+          this.enterStageClear(clearedStage);
+        } else if (!this.isBonusBossFight && this.settingsManager.difficulty === 'hard') {
+          // 高難易度なら、最終ステージクリア後に一度だけボーナスステージ4（ボス戦）へ案内する。
+          // isBonusBossFightは既にボーナス戦を経た（=この分岐を再度通ってはいけない）ことの判定も兼ねる。
+          this.bonusBossPending = true;
           this.enterStageClear(clearedStage);
         } else {
           this.finish('clear');

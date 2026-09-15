@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
-import { StatusManager, STATUS_MAX_LEVEL, StatKey, PlayerStatusData } from '../managers/StatusManager';
+import { StatusManager, STATUS_MAX_LEVEL, StatKey, PlayerStatusData, costForLevel } from '../managers/StatusManager';
+import { SettingsManager, Difficulty } from '../managers/SettingsManager';
 import { PlayerVariant } from '../entities/Player';
 
 interface StatusSceneData {
@@ -18,10 +19,10 @@ interface StatRow {
 }
 
 const STAT_ROWS: StatRow[] = [
-  { key: 'wep', label: 'WEP', color: 0xff8a3d, description: 'WEP：前方弾が1発増える。複数になると扇状に広がって発射される。' },
+  { key: 'wep', label: 'WEP', color: 0xff8a3d, description: 'WEP：自弾の見た目と当たり判定が大きくなる。Lvが上がるほど弾が太くなり、敵に当てやすくなる。' },
   { key: 'str', label: 'STR', color: 0xff5d7a, description: 'STR：自機の移動速度が上がる。避けにも攻めにも使える基礎ステータス。' },
   { key: 'def', label: 'DEF', color: 0x4dd0e1, description: 'DEF：自機の最大HPが増える。ステージ開始・クリア時に全回復する。' },
-  { key: 'dex', label: 'DEX', color: 0x9d7bff, description: 'DEX：後方弾が1発増える。複数になると扇状に広がって発射される。' },
+  { key: 'dex', label: 'DEX', color: 0x9d7bff, description: 'DEX：被弾した際の無敵時間が伸びる。連続被弾からの生存率が上がる。' },
 ];
 
 const MAX_LEVEL = STATUS_MAX_LEVEL;
@@ -30,6 +31,7 @@ const MAX_LEVEL = STATUS_MAX_LEVEL;
  *  貯めたステータスポイントをWEP/STR/DEF/DEXへ割り振る。 */
 export class StatusScene extends Phaser.Scene {
   private statusManager = StatusManager.getInstance();
+  private settingsManager = SettingsManager.getInstance();
   private sceneData!: StatusSceneData;
   private currentPlayer: PlayerVariant = 'p1';
   private selectedRow = 0;
@@ -44,6 +46,8 @@ export class StatusScene extends Phaser.Scene {
   private pointsText!: Phaser.GameObjects.Text;
   private playerTabTexts: Phaser.GameObjects.Text[] = [];
   private descText!: Phaser.GameObjects.Text;
+  private difficultyButtonBg!: Phaser.GameObjects.Graphics;
+  private difficultyButtonText!: Phaser.GameObjects.Text;
   private stars: Phaser.GameObjects.Arc[] = [];
   private backgroundGrid?: Phaser.GameObjects.Graphics;
 
@@ -52,7 +56,7 @@ export class StatusScene extends Phaser.Scene {
   private static readonly BAR_X = StatusScene.COL_X + 150;
   private static readonly BAR_WIDTH = 380;
   private static readonly ROW_START_Y = 170;
-  private static readonly ROW_HEIGHT = 68;
+  private static readonly ROW_HEIGHT = 58;
 
   constructor() {
     super('status');
@@ -91,6 +95,8 @@ export class StatusScene extends Phaser.Scene {
     if (this.sceneData.twoPlayer) this.createPlayerTabs();
     this.createStatRows();
     this.createDoneButton();
+    this.createTitleButton();
+    this.createDifficultyButton();
     this.setupInput();
 
     this.refresh(true);
@@ -142,9 +148,12 @@ export class StatusScene extends Phaser.Scene {
   // ヘッダー・サマリー・マスコット
   // ---------------------------------------------------------------------
 
+  /** 消えかけの蛍光灯看板をイメージしたネオン管風フォント（Google Fonts「Stick」。日本語グリフあり） */
+  private static readonly NEON_FONT_FAMILY = "'Stick', 'M PLUS 1p', 'Yu Gothic', 'Meiryo', sans-serif";
+
   private createHeader(): void {
     const titleMap: Record<StatusSceneData['mode'], string> = {
-      gameStart: 'ガレージケロ',
+      gameStart: 'ケロコガレージ',
       stageClear: `NEXT STAGE ${this.sceneData.stageNumber ?? ''}`,
     };
 
@@ -152,20 +161,79 @@ export class StatusScene extends Phaser.Scene {
     titleBack.fillStyle(0x0d4fa6, 0.35);
     titleBack.fillRoundedRect(GAME_CONFIG.WIDTH / 2 - 220, 12, 440, 46, 10);
 
-    this.add.text(GAME_CONFIG.WIDTH / 2, 35, titleMap[this.sceneData.mode], {
+    const isGameStart = this.sceneData.mode === 'gameStart';
+    const title = titleMap[this.sceneData.mode];
+    const titleText = this.add.text(GAME_CONFIG.WIDTH / 2, 35, title, {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '28px',
-      color: '#f8f7f2',
+      fontSize: isGameStart ? '32px' : '28px',
+      color: isGameStart ? '#a19361' : '#f8f7f2', // 油色（日本の伝統色）
       fontStyle: 'bold',
       stroke: '#0f172a',
       strokeThickness: 6,
     }).setOrigin(0.5).setDepth(2);
+
+    if (isGameStart) {
+      this.scheduleNeonFlicker(titleText);
+      // CanvasテキストはDOM上のテキストと違いWebフォントの自動読み込みをトリガーしないため、
+      // (特にGoogle FontsのCJKサブセットは)明示的にロードしてから差し替える。
+      this.loadNeonFont(title).then(() => {
+        if (titleText.active) titleText.setFontFamily(StatusScene.NEON_FONT_FAMILY);
+      });
+    }
 
     this.add.text(GAME_CONFIG.WIDTH / 2, 70, 'ステータスポイントを好きなように振り分けて、うさこ号をパワーアップさせよう！', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '13px',
       color: '#a9d6e5',
     }).setOrigin(0.5).setDepth(2);
+  }
+
+  /**
+   * Canvasへのテキスト描画はDOM表示と違いWebフォントの読み込みを自動トリガーしないため、
+   * CSS Font Loading APIで明示的にロードする。Google FontsのCJKはUnicode範囲ごとの
+   * サブセットに分割されているため、実際に表示する文字列を渡して該当サブセットを読ませる。
+   */
+  private async loadNeonFont(sampleText: string): Promise<void> {
+    try {
+      await document.fonts.load(`700 32px "Stick"`, sampleText);
+    } catch (e) {
+      console.warn('Failed to load neon font', e);
+    }
+  }
+
+  /** 消えかけの蛍光灯のように、不規則な間隔で1〜3回すばやく明滅させ続ける演出。 */
+  private scheduleNeonFlicker(text: Phaser.GameObjects.Text): void {
+    const nextDelay = Phaser.Math.Between(200, 2400);
+    this.time.delayedCall(nextDelay, () => {
+      if (!text.active) return;
+      this.playNeonFlickerBurst(text, () => this.scheduleNeonFlicker(text));
+    });
+  }
+
+  private playNeonFlickerBurst(text: Phaser.GameObjects.Text, onComplete: () => void): void {
+    const dips = Phaser.Math.Between(1, 3);
+    let completed = 0;
+
+    const runDip = () => {
+      if (!text.active) return;
+      this.tweens.add({
+        targets: text,
+        alpha: Phaser.Math.FloatBetween(0.15, 0.45),
+        duration: Phaser.Math.Between(25, 70),
+        ease: 'Linear',
+        yoyo: true,
+        onComplete: () => {
+          completed += 1;
+          if (completed < dips) {
+            this.time.delayedCall(Phaser.Math.Between(30, 90), runDip);
+          } else if (text.active) {
+            text.setAlpha(1);
+            onComplete();
+          }
+        },
+      });
+    };
+    runDip();
   }
 
   private createSummaryPanel(): void {
@@ -340,9 +408,20 @@ export class StatusScene extends Phaser.Scene {
 
     this.descText = this.add.text(GAME_CONFIG.WIDTH / 2 + 20, StatusScene.ROW_START_Y + STAT_ROWS.length * StatusScene.ROW_HEIGHT + 6, '', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '12px',
-      color: '#a9d6e5',
+      fontSize: '16px',
+      color: '#fde047',
+      align: 'center',
+      lineSpacing: 4,
+      wordWrap: { width: 660, useAdvancedWrap: true },
     }).setOrigin(0.5, 0).setDepth(2);
+
+    // 暗い背景に対して文字色が沈んで見づらかったため、タイトルと同じ蛍光灯風フォント＋点滅演出にする。
+    // 表示内容が行ごとに変わるため、全STAT_ROWSの説明文＋コスト表記に登場しうる文字をまとめてロードする。
+    this.scheduleNeonFlicker(this.descText);
+    const descSampleText = `${STAT_ROWS.map((row) => row.description).join('')}次のLvまで：0123456789pt（MAX）`;
+    this.loadNeonFont(descSampleText).then(() => {
+      if (this.descText.active) this.descText.setFontFamily(StatusScene.NEON_FONT_FAMILY);
+    });
   }
 
   private drawSegmentedBar(graphics: Phaser.GameObjects.Graphics, y: number, color: number, level: number): void {
@@ -371,11 +450,14 @@ export class StatusScene extends Phaser.Scene {
   }
 
   private createDoneButton(): void {
-    const btnBg = this.add.graphics().setDepth(1);
     const btnX = GAME_CONFIG.WIDTH - 100;
     const btnY = 35;
+    // Graphicsはbtnと違い原点(0,0)からの絶対座標で描画すると、setScale()が画面左上を基点に
+    // 拡縮してしまいホバー時にボックスだけ位置がズレる。position(btnX, btnY)に置いた上で
+    // ローカル原点(0,0)基準の相対座標で描画し、テキストと同じ中心を基点に拡縮させる。
+    const btnBg = this.add.graphics().setPosition(btnX, btnY).setDepth(1);
     btnBg.fillStyle(0xfde047, 1);
-    btnBg.fillRoundedRect(btnX - 65, btnY - 22, 130, 44, 10);
+    btnBg.fillRoundedRect(-65, -22, 130, 44, 10);
 
     const btn = this.add.text(btnX, btnY, '完了', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
@@ -388,11 +470,73 @@ export class StatusScene extends Phaser.Scene {
     btn.on('pointerout', () => { btn.setScale(1); btnBg.setScale(1); });
     btn.on('pointerdown', () => this.finish());
 
-    this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - 20, '↑↓：選択　←→：割り振り　ENTER / クリック：完了', {
+    // 画面左下に「高難易度」ボタンを置くスペースを確保するため、通常より少し右へ寄せる
+    this.add.text(GAME_CONFIG.WIDTH / 2 + 90, GAME_CONFIG.HEIGHT - 20, '↑↓：選択　←→：割り振り　ENTER / クリック：完了　　T：タイトルへ戻る', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '12px',
       color: '#64748b',
     }).setOrigin(0.5).setDepth(2);
+  }
+
+  private createDifficultyButton(): void {
+    const btnX = 100;
+    const btnY = GAME_CONFIG.HEIGHT - 35;
+    const btnBg = this.add.graphics().setPosition(btnX, btnY).setDepth(1);
+    this.difficultyButtonBg = btnBg;
+
+    const btn = this.add.text(btnX, btnY, '', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '15px',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(2).setInteractive({ useHandCursor: true });
+    this.difficultyButtonText = btn;
+
+    this.redrawDifficultyButton();
+
+    btn.on('pointerover', () => btnBg.setScale(1.06));
+    btn.on('pointerout', () => btnBg.setScale(1));
+    btn.on('pointerdown', () => {
+      const next: Difficulty = this.settingsManager.difficulty === 'hard' ? 'normal' : 'hard';
+      this.settingsManager.setDifficulty(next);
+      this.playSound('optSelect');
+      this.redrawDifficultyButton();
+    });
+  }
+
+  private redrawDifficultyButton(): void {
+    const isHard = this.settingsManager.difficulty === 'hard';
+    const bg = this.difficultyButtonBg;
+    bg.clear();
+    bg.fillStyle(isHard ? 0x7f1d1d : 0x1e293b, 1);
+    bg.fillRoundedRect(-75, -20, 150, 40, 10);
+    bg.lineStyle(1.5, isHard ? 0xf87171 : 0x64748b, 0.9);
+    bg.strokeRoundedRect(-75, -20, 150, 40, 10);
+
+    this.difficultyButtonText.setText(isHard ? '高難易度：ON' : '高難易度：OFF');
+    this.difficultyButtonText.setColor(isHard ? '#fecaca' : '#cbd5e1');
+  }
+
+  private createTitleButton(): void {
+    const btnX = 100;
+    const btnY = 35;
+    // 完了ボタンと同じ理由（Graphicsは絶対座標で描画するとsetScale()の基点が画面左上になる）で
+    // ホバー時にボックスがズレていたため、position(btnX, btnY)＋ローカル原点基準の相対座標に変更。
+    const btnBg = this.add.graphics().setPosition(btnX, btnY).setDepth(1);
+    btnBg.fillStyle(0x1e293b, 1);
+    btnBg.fillRoundedRect(-75, -20, 150, 40, 10);
+    btnBg.lineStyle(1.5, 0x64748b, 0.9);
+    btnBg.strokeRoundedRect(-75, -20, 150, 40, 10);
+
+    const btn = this.add.text(btnX, btnY, 'タイトルへ戻る', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '15px',
+      color: '#cbd5e1',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(2).setInteractive({ useHandCursor: true });
+
+    btn.on('pointerover', () => { btn.setColor('#fde047'); btnBg.setScale(1.06); });
+    btn.on('pointerout', () => { btn.setColor('#cbd5e1'); btnBg.setScale(1); });
+    btn.on('pointerdown', () => this.returnToTitle());
   }
 
   // ---------------------------------------------------------------------
@@ -417,6 +561,7 @@ export class StatusScene extends Phaser.Scene {
     });
     this.input.keyboard?.on('keydown-ENTER', () => this.finish());
     this.input.keyboard?.on('keydown-ESC', () => this.finish());
+    this.input.keyboard?.on('keydown-T', () => this.returnToTitle());
   }
 
   private navigateRow(delta: number): void {
@@ -497,7 +642,7 @@ export class StatusScene extends Phaser.Scene {
     const left = this.leftArrows[stat]!;
     const right = this.rightArrows[stat]!;
     const canDeallocate = status[stat] > 0;
-    const canAllocate = status.points > 0 && status[stat] < MAX_LEVEL;
+    const canAllocate = status[stat] < MAX_LEVEL && status.points >= costForLevel(status[stat]);
 
     left.setColor(canDeallocate ? '#f8f7f2' : '#3d4d6b');
     left.disableInteractive();
@@ -524,16 +669,32 @@ export class StatusScene extends Phaser.Scene {
         );
       }
     });
-    this.descText.setText(STAT_ROWS[this.selectedRow].description);
+    const selected = STAT_ROWS[this.selectedRow];
+    const status = this.statusManager.getData(this.currentPlayer);
+    const currentLevel = status[selected.key];
+    const costHint = currentLevel >= MAX_LEVEL
+      ? '（MAX）'
+      : `（次のLvまで：${costForLevel(currentLevel)}pt）`;
+    this.descText.setText(`${selected.description}\n${costHint}`);
   }
 
   private finish(): void {
     this.playSound('optConfirm');
     if (this.sceneData.mode === 'gameStart') {
-      this.scene.start('shooting', { twoPlayer: this.sceneData.twoPlayer });
+      // 高難易度がONの状態でゲームを開始する場合、ステージ1からではなく即ボーナスステージ4のボス戦へ突入する
+      const startAtBonusStage = this.settingsManager.difficulty === 'hard';
+      this.scene.start('shooting', { twoPlayer: this.sceneData.twoPlayer, startAtBonusStage });
     } else {
       this.scene.stop();
       this.scene.resume('shooting');
     }
+  }
+
+  private returnToTitle(): void {
+    this.playSound('optConfirm');
+    // stageClear経由の場合、裏で一時停止中のshootingシーンが残っているため、
+    // タイトルへ戻る際は明示的に停止して破棄する（gameStart経由ではshootingは未起動なので無害）。
+    this.scene.stop('shooting');
+    this.scene.start('title');
   }
 }
