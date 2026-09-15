@@ -16,11 +16,11 @@ export const GAME_CONFIG = {
   PLAYER_SPEED: 300,
   PLAYER_HP: 5,
   PLAYER_FIRE_INTERVAL: 100, // 弾の連射間隔（ミリ秒）
+  PLAYER_BULLET_SPEED: 520, // 自機弾の速さ
   BOSS_HP_MULTIPLIER_2P: 2, // 2人プレイ時にボスHPへ掛ける倍率
-  DEX_FIRE_INTERVAL_STEP: 6, // DEX 1Lvごとに連射間隔を短縮する量（ミリ秒）
-  MIN_PLAYER_FIRE_INTERVAL: 40, // 連射間隔の下限（ミリ秒）
-  WEP_DAMAGE_PER_LEVEL: 1, // WEP 1Lvごとに弾の威力（ダメージ量）が増える量
-  STR_EXTRA_SHOT_EVERY: 3, // STRがこのレベル数貯まるごとに同時発射弾が1本増える
+  STR_SPEED_PER_LEVEL: 20, // STR 1Lvごとに自機の移動速度が増える量
+  DEF_HP_PER_LEVEL: 1, // DEF 1Lvごとに自機の最大HPが増える量
+  FAN_ANGLE_STEP_DEG: 8, // WEP/DEXの弾が複数になったときの、隣接する弾同士の角度差（度）
   FONT_FAMILY: "'M PLUS 1p', 'Yu Gothic', 'Meiryo', sans-serif",
   // 起動時にフルオープニング（シーン1〜9）を再生するかどうか
   ENABLE_STARTUP_FULL_OPENING: false,

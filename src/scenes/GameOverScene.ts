@@ -7,6 +7,7 @@ interface GameOverData {
   score?: number;
   highScore?: number;
   isNewHighScore?: boolean;
+  twoPlayer?: boolean;
 }
 
 interface GameOverMenuItem {
@@ -18,6 +19,7 @@ export class GameOverScene extends Phaser.Scene {
   private score = 0;
   private highScore = 0;
   private isNewHighScore = false;
+  private twoPlayer = false;
   private bgm?: Phaser.Sound.BaseSound;
 
   private selectedIndex = 0;
@@ -35,6 +37,7 @@ export class GameOverScene extends Phaser.Scene {
     this.score = data.score ?? 0;
     this.highScore = data.highScore ?? 0;
     this.isNewHighScore = data.isNewHighScore ?? false;
+    this.twoPlayer = data.twoPlayer ?? false;
     this.selectedIndex = 0;
   }
 
@@ -93,7 +96,7 @@ export class GameOverScene extends Phaser.Scene {
         text: 'もう一度プレイ (Retry)',
         action: () => {
           this.bgm?.stop();
-          this.scene.start('shooting');
+          this.scene.start('status', { mode: 'gameStart', twoPlayer: this.twoPlayer });
         },
       },
       {
