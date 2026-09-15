@@ -5,6 +5,9 @@ import { Enemy } from '../Enemy';
 export class SquareEnemy extends Enemy {
   static readonly TEXTURE_KEY = 'enemySquare';
 
+  /** グレーの猫画像(neko.png)が他の敵より大きく見えすぎていたため、実写画像倍率だけ控えめにする */
+  protected override customImageScaleBoost = 1.1;
+
   static ensureTexture(scene: Phaser.Scene): void {
     if (scene.textures.exists(SquareEnemy.TEXTURE_KEY)) return;
 
