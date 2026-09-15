@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
 import { SettingsManager, Difficulty } from '../managers/SettingsManager';
 import { SaveManager } from '../managers/SaveManager';
+import { StatusManager } from '../managers/StatusManager';
 
 type OptionItemKey =
   | 'difficulty'
@@ -26,6 +27,7 @@ interface OptionItem {
 export class OptionScene extends Phaser.Scene {
   private settingsManager = SettingsManager.getInstance();
   private saveManager = SaveManager.getInstance();
+  private statusManager = StatusManager.getInstance();
   private selectedIndex = 0;
   private menuTexts: Phaser.GameObjects.Text[] = [];
   private valueTexts: Phaser.GameObjects.Text[] = [];
@@ -845,6 +847,7 @@ export class OptionScene extends Phaser.Scene {
     btnReset.on('pointerdown', () => {
       this.settingsManager.resetToDefault();
       this.saveManager.clearAll();
+      this.statusManager.clearAll();
       this.refreshValues();
       this.closeModal();
     });

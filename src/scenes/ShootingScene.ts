@@ -205,7 +205,12 @@ export class ShootingScene extends Phaser.Scene {
       }
       this.time.paused = false;
       this.tweens.resumeAll();
-      this.physics.resume();
+      // Arcade Physicsプラグイン自身のshutdown処理（this.physics.worldの破棄）は
+      // シーン起動時に登録されるため、create()内で登録した本ハンドラより先に走る。
+      // そのため通常のゲームオーバー等によるシーン終了時にはthis.physics.worldが
+      // 既にnullになっており、無条件にresume()を呼ぶと例外を投げてシーン遷移処理自体を
+      // 中断させ、ゲームオーバー画面が出ないままフリーズする原因になっていた。
+      if (this.physics.world) this.physics.resume();
       this.stopBgm();
       this.gameOverTransitionTimer?.remove(false);
       this.gameOverTransitionTimer = undefined;
