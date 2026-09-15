@@ -58,6 +58,7 @@ export class ShootingScene extends Phaser.Scene {
   private stageBgm?: Phaser.Sound.BaseSound;
   private bossBgm?: Phaser.Sound.BaseSound;
   private bgmLoopTimer?: Phaser.Time.TimerEvent;
+  private gameOverTransitionTimer?: Phaser.Time.TimerEvent;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -163,7 +164,11 @@ export class ShootingScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown-H', () => this.debugJumpToStage(1, true));
     this.input.keyboard!.on('keydown-J', () => this.debugJumpToStage(2, true));
 
-    this.events.once('shutdown', () => this.stopBgm());
+    this.events.once('shutdown', () => {
+      this.stopBgm();
+      this.gameOverTransitionTimer?.remove(false);
+      this.gameOverTransitionTimer = undefined;
+    });
   }
 
   update(_time: number, delta: number): void {
@@ -608,7 +613,7 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private hitPlayer(object1: any, object2: any): void {
-    if (!this.player || !this.player.active || this.player.isInvulnerable) return;
+    if (this.mode !== 'playing' || !this.player || !this.player.active || this.player.isInvulnerable) return;
 
     const hazard = (object1 === this.player) ? object2 : object1;
     // Hazard（警告ビーム・爆風）のvisualはSprite/Imageではない（Rectangle/Arc）のでdisableBody()を持たない。
@@ -630,6 +635,8 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private finish(mode: 'clear' | 'gameOver'): void {
+    // 残った重なり判定や死亡演出中の接触から終了処理が重複しないようにする。
+    if (this.mode !== 'playing') return;
     this.mode = mode;
     this.stopBgm();
     if (this.player?.active) this.player.setVelocity(0, 0);
@@ -649,7 +656,9 @@ export class ShootingScene extends Phaser.Scene {
       this.scoreText.setVisible(false);
       this.progressText.setVisible(false);
       this.player.startDeathAnimation(() => {
-        this.time.delayedCall(ShootingScene.GAME_OVER_TRANSITION_DELAY, () => {
+        this.gameOverTransitionTimer = this.time.delayedCall(ShootingScene.GAME_OVER_TRANSITION_DELAY, () => {
+          this.gameOverTransitionTimer = undefined;
+          if (this.mode !== 'gameOver') return;
           this.scene.start('gameOver', {
             score: this.score,
             highScore: this.saveManager.highScore,
