@@ -230,8 +230,8 @@ export class ShootingScene extends Phaser.Scene {
 
     const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.fillStyle(0x9aa0a6).fillRect(0, 0, 10, 10).generateTexture('player-air-cannon', 10, 10);
-    graphics.clear().fillStyle(0xffc857).fillCircle(10, 10, 10).generateTexture('bullet', 20, 20);
-    graphics.clear().fillStyle(0xff4d6d).fillCircle(10, 10, 10).generateTexture('enemyBullet', 20, 20);
+    graphics.clear().fillStyle(0xffc857).fillCircle(12, 12, 12).generateTexture('bullet', 24, 24);
+    graphics.clear().fillStyle(0xff4d6d).fillCircle(8, 8, 8).generateTexture('enemyBullet', 16, 16);
     graphics.destroy();
   }
 
@@ -791,7 +791,7 @@ export class ShootingScene extends Phaser.Scene {
     }
     this.boss.spawn(bx, by, this.bossMaxHp);
     this.stopBgm();
-    const alertSound = this.sound.add('se_boss_alert', { volume: 0.7 });
+    const alertSound = this.sound.add('se_boss_alert', { volume: this.seVolume(0.7) });
     alertSound.once('complete', () => {
       if (this.mode === 'playing' && this.boss?.active) this.playBossBgm();
     });
@@ -878,7 +878,7 @@ export class ShootingScene extends Phaser.Scene {
     bullet.disableBody(true, true);
     if (enemy.takeDamage()) {
       enemy.disableBody(true, true);
-      this.sound.play('se_enemy_defeat', { volume: 0.45 });
+      this.sound.play('se_enemy_defeat', { volume: this.seVolume(0.45) });
       this.score += ShootingScene.SCORE_ENEMY_DEFEAT;
       this.updateHud();
     }
@@ -960,7 +960,7 @@ export class ShootingScene extends Phaser.Scene {
         });
 
         if (i % 2 === 0) {
-          this.sound.play('se_enemy_defeat', { volume: 0.6 });
+          this.sound.play('se_enemy_defeat', { volume: this.seVolume(0.6) });
         }
       });
     }
@@ -969,7 +969,7 @@ export class ShootingScene extends Phaser.Scene {
     this.time.delayedCall(explosionCount * 80 + 100, () => {
       const bigBoom = this.add.circle(x, y, 85, 0xffd166, 0.95).setDepth(8);
       const flash = this.add.circle(x, y, 115, 0xffffff, 1).setDepth(9);
-      this.sound.play('se_enemy_defeat', { volume: 0.8 });
+      this.sound.play('se_enemy_defeat', { volume: this.seVolume(0.8) });
       this.cameras.main.flash(350, 255, 255, 255);
 
       this.tweens.add({
@@ -1046,7 +1046,7 @@ export class ShootingScene extends Phaser.Scene {
     }
 
     const dead = player.damage();
-    this.sound.play('se_player_hit', { volume: 0.6 });
+    this.sound.play('se_player_hit', { volume: this.seVolume(0.6) });
     this.updateHud();
 
     if (dead) {
@@ -1055,7 +1055,7 @@ export class ShootingScene extends Phaser.Scene {
         // このプレイヤーは撃墜されたが、相方が生きているのでゲームは続行する。
         player.startDeathAnimation();
       } else {
-        this.sound.play('se_player_game_over', { volume: 0.8 });
+        this.sound.play('se_player_game_over', { volume: this.seVolume(0.8) });
         this.finish('gameOver', player);
       }
     }
@@ -1109,6 +1109,7 @@ export class ShootingScene extends Phaser.Scene {
   private playStageBgm(): void {
     this.stopBgm();
     if (!this.stageBgm) this.stageBgm = this.createBgm('stage_bgm');
+    (this.stageBgm as Phaser.Sound.WebAudioSound).setVolume(this.settingsManager.bgmVolume / 100);
     this.stageBgm.play();
     this.scheduleBgmLoop(this.stageBgm, 'stage_bgm');
   }
@@ -1116,6 +1117,7 @@ export class ShootingScene extends Phaser.Scene {
   private playBossBgm(): void {
     this.stopBgm();
     if (!this.bossBgm) this.bossBgm = this.createBgm('boss_bgm');
+    (this.bossBgm as Phaser.Sound.WebAudioSound).setVolume(this.settingsManager.bgmVolume / 100);
     this.bossBgm.play();
     this.scheduleBgmLoop(this.bossBgm, 'boss_bgm');
   }
@@ -1125,6 +1127,11 @@ export class ShootingScene extends Phaser.Scene {
       loop: false,
       volume: this.settingsManager.bgmVolume / 100,
     });
+  }
+
+  /** SEの基準音量(0〜1)にオプションのSE音量設定を掛け合わせる。 */
+  private seVolume(baseVolume: number): number {
+    return baseVolume * (this.settingsManager.seVolume / 100);
   }
 
   private scheduleBgmLoop(sound: Phaser.Sound.BaseSound, key: string): void {

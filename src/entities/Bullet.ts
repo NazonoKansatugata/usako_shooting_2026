@@ -7,9 +7,9 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
 
     if (key === 'bullet') {
-      (this.body as Phaser.Physics.Arcade.Body).setCircle(6, 4, 4);
+      (this.body as Phaser.Physics.Arcade.Body).setCircle(8, 4, 4);
     } else {
-      (this.body as Phaser.Physics.Arcade.Body).setCircle(5, 3, 3);
+      (this.body as Phaser.Physics.Arcade.Body).setCircle(4, 2, 2);
     }
   }
 
