@@ -31,6 +31,11 @@ interface CloudFlow {
   alpha: number;
 }
 
+interface PauseMenuItem {
+  text: string;
+  action: () => void;
+}
+
 export class ShootingScene extends Phaser.Scene {
   /** shooterタイプの雑魚敵が画面内に入ってから発射するまでの遅延(ms) */
   private static readonly SHOOT_DELAY_AFTER_ENTRY = 500;
@@ -110,6 +115,12 @@ export class ShootingScene extends Phaser.Scene {
   private instruction!: Phaser.GameObjects.Text;
   private stageClearPanel?: Phaser.GameObjects.Container;
   private pauseOverlay?: Phaser.GameObjects.Container;
+  private pauseSelectedIndex = 0;
+  private pauseMenuItems: PauseMenuItem[] = [];
+  private pauseMenuTexts: Phaser.GameObjects.Text[] = [];
+  private pauseMenuBackplates: Phaser.GameObjects.Graphics[] = [];
+  private pauseMenuHitAreas: Phaser.GameObjects.Zone[] = [];
+  private pauseCursorIcon?: Phaser.GameObjects.Text;
   private escapeKeyHandler?: (event: KeyboardEvent) => void;
 
   constructor() {
@@ -189,6 +200,13 @@ export class ShootingScene extends Phaser.Scene {
         this.scene.start('title');
       }
     });
+
+    this.input.keyboard!.on('keydown-UP', () => this.navigatePauseMenu(-1));
+    this.input.keyboard!.on('keydown-W', () => this.navigatePauseMenu(-1));
+    this.input.keyboard!.on('keydown-DOWN', () => this.navigatePauseMenu(1));
+    this.input.keyboard!.on('keydown-S', () => this.navigatePauseMenu(1));
+    this.input.keyboard!.on('keydown-ENTER', () => this.executePauseMenuItem());
+    this.input.keyboard!.on('keydown-SPACE', () => this.executePauseMenuItem());
 
     // デバッグ用：1/2/3でステージ1/2/3の先頭へ、G/H/Jでそれぞれのボス戦へ直接ジャンプする
     this.input.keyboard!.on('keydown-ONE', () => this.debugJumpToStage(0));
@@ -413,6 +431,10 @@ export class ShootingScene extends Phaser.Scene {
 
   private showPauseOverlay(): void {
     this.hidePauseOverlay();
+    this.pauseSelectedIndex = 0;
+    this.pauseMenuTexts = [];
+    this.pauseMenuBackplates = [];
+    this.pauseMenuHitAreas = [];
 
     const overlay = this.add.container(0, 0).setDepth(60);
     this.pauseOverlay = overlay;
@@ -423,31 +445,166 @@ export class ShootingScene extends Phaser.Scene {
       GAME_CONFIG.WIDTH,
       GAME_CONFIG.PLAY_AREA.HEIGHT,
       0x050914,
-      0.56,
+      0.64,
     ).setOrigin(0));
 
-    overlay.add(this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 18, 'PAUSE', {
+    const panelX = GAME_CONFIG.WIDTH / 2;
+    const panelY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
+    const panelW = 430;
+    const panelH = 260;
+
+    const panel = this.add.graphics();
+    panel.fillStyle(0x07111f, 0.9);
+    panel.fillRoundedRect(panelX - panelW / 2, panelY - panelH / 2, panelW, panelH, 10);
+    panel.lineStyle(2, 0x38bdf8, 0.7);
+    panel.strokeRoundedRect(panelX - panelW / 2, panelY - panelH / 2, panelW, panelH, 10);
+    overlay.add(panel);
+
+    overlay.add(this.add.text(panelX, panelY - 88, 'PAUSE', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '48px',
+      fontSize: '42px',
       color: '#f8f7f2',
       fontStyle: 'bold',
       stroke: '#07111f',
       strokeThickness: 7,
     }).setOrigin(0.5));
 
-    overlay.add(this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 + 44, 'ESC：ゲームに戻る', {
+    this.pauseMenuItems = [
+      {
+        text: 'ゲームに戻る',
+        action: () => this.resumeGame(),
+      },
+      {
+        text: 'タイトルへ戻る',
+        action: () => this.returnToTitleFromPause(),
+      },
+      // 「ステージの最初から再挑戦」は、ここへ項目を追加できるようにしておく。
+    ];
+
+    const startY = panelY - 18;
+    const itemHeight = 54;
+    const btnW = 300;
+
+    this.pauseCursorIcon = this.add.text(panelX - btnW / 2 - 18, startY, '▶', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '18px',
+      fontSize: '20px',
+      color: '#f6d365',
+    }).setOrigin(0.5);
+    overlay.add(this.pauseCursorIcon);
+
+    this.pauseMenuItems.forEach((item, index) => {
+      const y = startY + index * itemHeight;
+      const backplate = this.add.graphics();
+      this.pauseMenuBackplates.push(backplate);
+      overlay.add(backplate);
+
+      const hitArea = this.add.zone(panelX, y, btnW, 44)
+        .setInteractive({ useHandCursor: true });
+      hitArea.on('pointerover', () => {
+        if (this.pauseSelectedIndex === index) return;
+        this.pauseSelectedIndex = index;
+        this.updatePauseMenuSelection();
+        this.playPauseSound('gameOverSelect');
+      });
+      hitArea.on('pointerdown', () => {
+        this.pauseSelectedIndex = index;
+        this.updatePauseMenuSelection();
+        this.executePauseMenuItem();
+      });
+      this.pauseMenuHitAreas.push(hitArea);
+      overlay.add(hitArea);
+
+      const text = this.add.text(panelX, y, item.text, {
+        fontFamily: GAME_CONFIG.FONT_FAMILY,
+        fontSize: '19px',
+        color: '#e2e8f0',
+        stroke: '#0f172a',
+        strokeThickness: 3,
+      }).setOrigin(0.5);
+      this.pauseMenuTexts.push(text);
+      overlay.add(text);
+    });
+
+    overlay.add(this.add.text(panelX, panelY + 104, '↑↓ / WS：選択　ENTER / SPACE / クリック：決定　ESC：ゲームに戻る', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '12px',
       color: '#a9d6e5',
       stroke: '#07111f',
-      strokeThickness: 4,
+      strokeThickness: 3,
     }).setOrigin(0.5));
+
+    this.updatePauseMenuSelection();
   }
 
   private hidePauseOverlay(): void {
     if (!this.pauseOverlay) return;
     this.pauseOverlay.destroy(true);
     this.pauseOverlay = undefined;
+    this.pauseMenuItems = [];
+    this.pauseMenuTexts = [];
+    this.pauseMenuBackplates = [];
+    this.pauseMenuHitAreas = [];
+    this.pauseCursorIcon = undefined;
+  }
+
+  private navigatePauseMenu(delta: number): void {
+    if (this.mode !== 'paused' || this.pauseMenuItems.length === 0) return;
+    this.pauseSelectedIndex = (this.pauseSelectedIndex + delta + this.pauseMenuItems.length) % this.pauseMenuItems.length;
+    this.updatePauseMenuSelection();
+    this.playPauseSound('gameOverSelect');
+  }
+
+  private executePauseMenuItem(): void {
+    if (this.mode !== 'paused') return;
+    const item = this.pauseMenuItems[this.pauseSelectedIndex];
+    if (!item) return;
+    this.playPauseSound('gameOverConfirm');
+    item.action();
+  }
+
+  private updatePauseMenuSelection(): void {
+    if (this.mode !== 'paused' || !this.pauseCursorIcon) return;
+
+    const panelX = GAME_CONFIG.WIDTH / 2;
+    const startY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 18;
+    const itemHeight = 54;
+    const btnW = 300;
+
+    this.pauseCursorIcon.setY(startY + this.pauseSelectedIndex * itemHeight);
+
+    this.pauseMenuTexts.forEach((text, index) => {
+      const y = startY + index * itemHeight;
+      const backplate = this.pauseMenuBackplates[index];
+      if (!backplate || !text) return;
+      backplate.clear();
+
+      if (index === this.pauseSelectedIndex) {
+        text.setColor('#f6d365').setFontSize(21).setStyle({ fontStyle: 'bold' });
+        backplate.fillStyle(0x0d4fa6, 0.92);
+        backplate.fillRoundedRect(panelX - btnW / 2, y - 22, btnW, 44, 8);
+        backplate.lineStyle(2, 0xfacc15, 0.9);
+        backplate.strokeRoundedRect(panelX - btnW / 2, y - 22, btnW, 44, 8);
+      } else {
+        text.setColor('#cbd5e1').setFontSize(19).setStyle({ fontStyle: 'normal' });
+        backplate.fillStyle(0x061a4a, 0.62);
+        backplate.fillRoundedRect(panelX - btnW / 2, y - 22, btnW, 44, 8);
+        backplate.lineStyle(1, 0x1e55b7, 0.45);
+        backplate.strokeRoundedRect(panelX - btnW / 2, y - 22, btnW, 44, 8);
+      }
+    });
+  }
+
+  private returnToTitleFromPause(): void {
+    this.hidePauseOverlay();
+    this.time.paused = false;
+    this.tweens.resumeAll();
+    if (this.physics.world) this.physics.resume();
+    this.stopBgm();
+    this.scene.start('title', { playIntro: false });
+  }
+
+  private playPauseSound(key: string): void {
+    if (this.cache.audio.exists(key)) this.sound.play(key, { volume: this.settingsManager.seVolume / 100 });
   }
 
   private showTwoPlayerControlHint(): void {
