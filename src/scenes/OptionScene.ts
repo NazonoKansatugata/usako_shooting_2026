@@ -897,10 +897,12 @@ export class OptionScene extends Phaser.Scene {
     });
     container.add(bodyText);
 
-    const closeBtn = this.add.text(GAME_CONFIG.WIDTH / 2, boxY + boxH - 30, '【 閉じる (ESC / クリック) 】', {
+    const closeBtn = this.add.text(GAME_CONFIG.WIDTH / 2, boxY + boxH + 24, '【 閉じる (ESC / クリック) 】', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '15px',
       color: '#f6d365',
+      stroke: '#000',
+      strokeThickness: 3,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     closeBtn.on('pointerdown', () => this.closeModal());
