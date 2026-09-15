@@ -154,6 +154,12 @@ export class ShootingScene extends Phaser.Scene {
       if (!this.load.isLoading()) this.load.start();
     });
 
+    // ステージクリア後のステータス画面（'status'シーン）が完了すると本シーンがresumeされる。
+    // その時点で次ステージ開始処理を行う。
+    this.events.on('resume', () => {
+      if (this.mode === 'stageClear') this.startNextStage();
+    });
+
     this.input.keyboard!.on('keydown-ENTER', () => {
       if (this.mode === 'stageClear') {
         this.startNextStage();
