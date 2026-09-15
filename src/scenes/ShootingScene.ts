@@ -88,8 +88,6 @@ export class ShootingScene extends Phaser.Scene {
   /** ボーナスボスのみステージJSON外のHPを使うため、bossMaxHp計算用に個別保持する */
   private bonusBossMaxHp?: number;
   private static readonly BONUS_BOSS_HP = 130;
-  private static readonly BONUS_BOSS_BULLET_INTERVAL = 900;
-  private static readonly BONUS_BOSS_BULLET_SPEED = 300;
   private score = 0;
   private static readonly SCORE_ENEMY_DEFEAT = 100;
   private static readonly SCORE_BOSS_DEFEAT = 3000;
@@ -203,7 +201,11 @@ export class ShootingScene extends Phaser.Scene {
           score: this.score,
           stageNumber: this.bonusBossPending ? 4 : this.stageManager.stageNumber,
         });
-      } else if (this.mode === 'gameOver' || this.mode === 'clear') {
+      } else if (this.mode === 'clear') {
+        // 'gameOver'はfinish()内でシーン遷移前に同期的にセットされるため、ここで反応すると
+        // 死亡演出～GameOverScene遷移までの間にEnterを押した際、本来のGameOverScene→ステータス画面
+        // （難易度反映）を経由せずstartGame()で即座に普通の難易度で再開してしまうバグになる。
+        // 'gameOver'はここでは無視し、必ずGameOverScene→ステータス画面経由で再開させる。
         this.startGame();
       }
     });
@@ -359,7 +361,9 @@ export class ShootingScene extends Phaser.Scene {
     this.hpText = this.add.text(24, 20, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '20px', color: '#f6d365' }).setDepth(5);
     this.hpText2 = this.add.text(24, 46, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '20px', color: '#f6a3d3' }).setDepth(5).setVisible(false);
     this.scoreText = this.add.text(24, 46, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '16px', color: '#f8f7f2' }).setDepth(5);
-    this.progressText = this.add.text(GAME_CONFIG.WIDTH - 24, 20, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '18px', color: '#a9d6e5' }).setOrigin(1, 0).setDepth(5);
+    this.progressText = this.add.text(GAME_CONFIG.WIDTH - 24, 20, '', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '18px', color: '#a9d6e5', stroke: '#12263a', strokeThickness: 5,
+    }).setOrigin(1, 0).setDepth(5);
     this.banner = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 35, '', {
       fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '48px', color: '#f8f7f2', align: 'center', stroke: '#12263a', strokeThickness: 8,
     }).setOrigin(0.5).setDepth(6);
@@ -1149,18 +1153,15 @@ export class ShootingScene extends Phaser.Scene {
   /**
    * 高難易度ボーナスステージ4のボスを生成する。ステージJSONを持たないため、
    * HP・弾設定はShootingScene側の定数（BONUS_BOSS_*）を直接使う。
-   * 本体のみ自弾との当たり判定（hitBoss）を持ち、分身2体は自機との接触のみ危険。
    */
   private spawnStage4Boss(): void {
     const bx = GAME_CONFIG.WIDTH - 100;
     const by = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
     const hitPlayer = this.hitPlayer.bind(this);
+    const instaKillPlayer = this.instaKillPlayer.bind(this);
     const getPlayers = () => this.activePlayers();
 
-    const boss = new Stage4Boss(
-      this, bx, by, getPlayers, this.enemyBullets,
-      ShootingScene.BONUS_BOSS_BULLET_INTERVAL, ShootingScene.BONUS_BOSS_BULLET_SPEED,
-    );
+    const boss = new Stage4Boss(this, bx, by, getPlayers, hitPlayer, instaKillPlayer);
     this.boss = boss;
     this.bonusBossMaxHp = ShootingScene.BONUS_BOSS_HP;
     boss.spawn(bx, by, this.bossMaxHp);
@@ -1178,9 +1179,6 @@ export class ShootingScene extends Phaser.Scene {
     this.physics.add.overlap(this.bullets, this.boss, this.hitBoss, undefined, this);
     for (const player of this.activePlayers()) {
       this.physics.add.overlap(this.boss, player, hitPlayer, undefined, this);
-      for (const clone of boss.clones) {
-        this.physics.add.overlap(clone, player, hitPlayer, undefined, this);
-      }
     }
   }
 
@@ -1438,16 +1436,33 @@ export class ShootingScene extends Phaser.Scene {
     this.sound.play('se_player_hit', { volume: this.seVolume(0.6) });
     this.updateHud();
 
-    if (dead) {
-      const survivors = this.livingPlayers().filter((p) => p !== player);
-      if (survivors.length > 0) {
-        // このプレイヤーは撃墜されたが、相方が生きているのでゲームは続行する。
-        player.startDeathAnimation();
-      } else {
-        this.sound.play('se_player_game_over', { volume: this.seVolume(0.8) });
-        this.finish('gameOver', player);
-      }
+    if (dead) this.handlePlayerDeath(player);
+  }
+
+  /** 被弾によりHPが尽きたプレイヤーの後処理。相方が生きていれば続行、いなければゲームオーバーへ。 */
+  private handlePlayerDeath(player: Player): void {
+    const survivors = this.livingPlayers().filter((p) => p !== player);
+    if (survivors.length > 0) {
+      // このプレイヤーは撃墜されたが、相方が生きているのでゲームは続行する。
+      player.startDeathAnimation();
+    } else {
+      this.sound.play('se_player_game_over', { volume: this.seVolume(0.8) });
+      this.finish('gameOver', player);
     }
+  }
+
+  /**
+   * 無敵時間・DEFなど通常の被弾処理を完全に無視して即座に撃墜する。
+   * ステージ4ボスの「安置以外は即ゲームオーバー」演出専用。
+   */
+  private instaKillPlayer(target: Phaser.Physics.Arcade.Sprite): void {
+    if (!(target instanceof Player)) return;
+    const player = target;
+    if (this.mode !== 'playing' || !player.active || !player.visible) return;
+    player.forceKill();
+    this.sound.play('se_player_hit', { volume: this.seVolume(0.6) });
+    this.updateHud();
+    this.handlePlayerDeath(player);
   }
 
   private finish(mode: 'clear' | 'gameOver', lastPlayer?: Player): void {
@@ -1569,10 +1584,10 @@ export class ShootingScene extends Phaser.Scene {
     this.scoreText.setText(`SCORE  ${this.score}`);
 
     if (this.boss && this.boss.active) {
-      this.progressText.setText(`BOSS  ${this.boss.hp} / ${this.bossMaxHp}`);
+      this.progressText.setColor('#ff6b6b').setText(`BOSS  ${this.boss.hp} / ${this.bossMaxHp}`);
     } else {
       const pct = Math.min(100, Math.floor(this.stageTime / this.stageManager.current.duration * 100));
-      this.progressText.setText(`STAGE ${this.stageManager.stageNumber}/${this.stageManager.totalStages}  ${pct}%`);
+      this.progressText.setColor('#a9d6e5').setText(`STAGE ${this.stageManager.stageNumber}/${this.stageManager.totalStages}  ${pct}%`);
     }
   }
 
