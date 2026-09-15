@@ -479,7 +479,7 @@ export class ShootingScene extends Phaser.Scene {
     const panelX = GAME_CONFIG.WIDTH / 2;
     const panelY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
     const panelW = 430;
-    const panelH = 260;
+    const panelH = 300;
 
     const panel = this.add.graphics();
     panel.fillStyle(0x07111f, 0.9);
@@ -488,7 +488,7 @@ export class ShootingScene extends Phaser.Scene {
     panel.strokeRoundedRect(panelX - panelW / 2, panelY - panelH / 2, panelW, panelH, 10);
     overlay.add(panel);
 
-    overlay.add(this.add.text(panelX, panelY - 88, 'PAUSE', {
+    overlay.add(this.add.text(panelX, panelY - 106, 'PAUSE', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '42px',
       color: '#f8f7f2',
@@ -503,14 +503,17 @@ export class ShootingScene extends Phaser.Scene {
         action: () => this.resumeGame(),
       },
       {
+        text: 'ステージの最初から再挑戦',
+        action: () => this.retryCurrentStageFromPause(),
+      },
+      {
         text: 'タイトルへ戻る',
         action: () => this.returnToTitleFromPause(),
       },
-      // 「ステージの最初から再挑戦」は、ここへ項目を追加できるようにしておく。
     ];
 
-    const startY = panelY - 18;
-    const itemHeight = 54;
+    const startY = panelY - 35;
+    const itemHeight = 50;
     const btnW = 300;
 
     this.pauseCursorIcon = this.add.text(panelX - btnW / 2 - 18, startY, '▶', {
@@ -553,7 +556,7 @@ export class ShootingScene extends Phaser.Scene {
       overlay.add(text);
     });
 
-    overlay.add(this.add.text(panelX, panelY + 104, '↑↓ / WS：選択　ENTER / SPACE / クリック：決定　ESC：ゲームに戻る', {
+    overlay.add(this.add.text(panelX, panelY + 116, '↑↓ / WS：選択　ENTER / SPACE / クリック：決定　ESC：ゲームに戻る', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '12px',
       color: '#a9d6e5',
@@ -594,8 +597,8 @@ export class ShootingScene extends Phaser.Scene {
     if (this.mode !== 'paused' || !this.pauseCursorIcon) return;
 
     const panelX = GAME_CONFIG.WIDTH / 2;
-    const startY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 18;
-    const itemHeight = 54;
+    const startY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 35;
+    const itemHeight = 50;
     const btnW = 300;
 
     this.pauseCursorIcon.setY(startY + this.pauseSelectedIndex * itemHeight);
@@ -629,6 +632,22 @@ export class ShootingScene extends Phaser.Scene {
     if (this.physics.world) this.physics.resume();
     this.stopBgm();
     this.scene.start('title', { playIntro: false });
+  }
+
+  private retryCurrentStageFromPause(): void {
+    const retryBonusBoss = this.isBonusBossFight;
+    const retryStageIndex = this.stageManager.stageNumber - 1;
+    this.hidePauseOverlay();
+    this.time.paused = false;
+    this.tweens.resumeAll();
+    if (this.physics.world) this.physics.resume();
+
+    if (retryBonusBoss) {
+      this.startBonusBossStage();
+      return;
+    }
+
+    this.debugJumpToStage(retryStageIndex);
   }
 
   private playPauseSound(key: string): void {
@@ -906,7 +925,9 @@ export class ShootingScene extends Phaser.Scene {
     // ボス戦へ直接突入するため、update()内の「時間経過でボス前イベント発火」処理を無効化しておく
     this.bossPreEventTriggered = true;
     this.bossDefeated = false;
+    if (this.boss) this.boss.destroy();
     this.boss = undefined;
+    this.bullets.clear(true, true);
     this.forEachEnemyGroup((group) => group.clear(true, true));
     this.enemyBullets.clear(true, true);
     this.enemyHomingBullets.clear(true, true);
