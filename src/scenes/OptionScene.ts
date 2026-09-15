@@ -31,6 +31,12 @@ export class OptionScene extends Phaser.Scene {
   private valueTexts: Phaser.GameObjects.Text[] = [];
   private menuBackplates: Phaser.GameObjects.Graphics[] = [];
   private menuHitAreas: Phaser.GameObjects.Zone[] = [];
+
+  // 音量スライダー
+  private volumeSliders: Map<OptionItemKey, Phaser.GameObjects.Graphics> = new Map();
+  private volumeSliderHitAreas: Map<OptionItemKey, Phaser.GameObjects.Zone> = new Map();
+  private draggingVolumeKey: 'bgm' | 'se' | 'voice' | null = null;
+
   private cursorIcon!: Phaser.GameObjects.Text;
   private descText!: Phaser.GameObjects.Text;
   private backgroundGrid?: Phaser.GameObjects.Graphics;
@@ -58,8 +64,9 @@ export class OptionScene extends Phaser.Scene {
     this.valueTexts = [];
     this.menuBackplates = [];
     this.menuHitAreas = [];
+    this.volumeSliders.clear();
+    this.volumeSliderHitAreas.clear();
     this.stars = [];
-
     this.createBackgroundStars();
     this.setupItems();
     this.createUI();
@@ -264,6 +271,129 @@ export class OptionScene extends Phaser.Scene {
         strokeThickness: 3,
       }).setOrigin(1, 0.5).setDepth(2);
 
+      // BGM / SE / ボイスの場合はスライダーを表示
+      if (
+        item.key === 'bgm' ||
+        item.key === 'se' ||
+        item.key === 'voice'
+      ) {
+        const sliderX = boxX + 400;
+        const sliderWidth = 180;
+
+        // スライダー本体
+        const slider = this.add.graphics().setDepth(2);
+
+        this.volumeSliders.set(item.key, slider);
+
+        let volume = 0;
+
+        if (item.key === 'bgm') {
+          volume = this.settingsManager.bgmVolume;
+        } else if (item.key === 'se') {
+          volume = this.settingsManager.seVolume;
+        } else {
+          volume = this.settingsManager.voiceVolume;
+        }
+
+        this.drawVolumeSlider(
+          slider,
+          sliderX,
+          y,
+          sliderWidth,
+          volume
+        );
+
+        // --------------------------------
+        // スライダーのクリック判定
+        // --------------------------------
+        const sliderHitArea = this.add
+          .zone(
+            sliderX + sliderWidth / 2,
+            y,
+            sliderWidth + 20,
+            30
+          )
+          .setDepth(3)
+          .setInteractive({ useHandCursor: true });
+
+        this.volumeSliderHitAreas.set(item.key, sliderHitArea);
+
+        // スライダーをクリックしたとき
+        sliderHitArea.on(
+          'pointerdown',
+          (pointer: Phaser.Input.Pointer) => {
+
+            // 音量項目以外なら何もしない
+            if (
+              item.key !== 'bgm' &&
+              item.key !== 'se' &&
+              item.key !== 'voice'
+            ) {
+              return;
+            }
+
+            // 現在このスライダーをドラッグ中にする
+            this.draggingVolumeKey = item.key;
+
+            // 選択中の項目も変更
+            this.selectedIndex = index;
+
+            // クリックした位置に音量を変更
+            this.updateVolumeFromPointer(
+              item.key,
+              pointer.x,
+              sliderX,
+              sliderWidth
+            );
+
+            this.updateSelection();
+
+            // 操作音
+            this.playSound('optSelect');
+          }
+        );
+
+        sliderHitArea.on(
+          'pointermove',
+          (pointer: Phaser.Input.Pointer) => {
+
+            // このスライダーをドラッグ中でなければ何もしない
+            if (this.draggingVolumeKey !== item.key) {
+              return;
+            }
+
+            // マウスボタンを押していなければ何もしない
+            if (!pointer.isDown) {
+              return;
+            }
+
+            // マウス位置に合わせて音量変更
+            this.updateVolumeFromPointer(
+              item.key,
+              pointer.x,
+              sliderX,
+              sliderWidth
+            );
+          }
+        );
+        sliderHitArea.on(
+          'pointerup',
+          () => {
+            this.draggingVolumeKey = null;
+          }
+        );
+
+        sliderHitArea.on(
+          'pointerout',
+          (pointer: Phaser.Input.Pointer) => {
+
+            // ボタンを離している場合だけドラッグ終了
+            if (!pointer.isDown) {
+              this.draggingVolumeKey = null;
+            }
+          }
+        );
+      }
       this.menuTexts.push(label);
       this.valueTexts.push(value);
     });
@@ -306,6 +436,47 @@ export class OptionScene extends Phaser.Scene {
         this.scene.start('title', { playIntro: false });
       }
     });
+    // ========================================
+    // 音量スライダーのドラッグ操作
+    // ========================================
+
+    this.input.on(
+      'pointermove',
+      (pointer: Phaser.Input.Pointer) => {
+
+        // ドラッグ中でなければ何もしない
+        if (this.draggingVolumeKey === null) {
+          return;
+        }
+
+        // マウスボタンが押されていなければ終了
+        if (!pointer.isDown) {
+          this.draggingVolumeKey = null;
+          return;
+        }
+
+        const boxW = 720;
+        const boxX = (GAME_CONFIG.WIDTH - boxW) / 2;
+
+        const sliderX = boxX + 400;
+        const sliderWidth = 180;
+
+        this.updateVolumeFromPointer(
+          this.draggingVolumeKey,
+          pointer.x,
+          sliderX,
+          sliderWidth
+        );
+      }
+    );
+
+    // マウスボタンを離したらドラッグ終了
+    this.input.on(
+      'pointerup',
+      () => {
+        this.draggingVolumeKey = null;
+      }
+    );
   }
 
   private navigate(delta: number): void {
@@ -375,10 +546,135 @@ export class OptionScene extends Phaser.Scene {
     this.descText.setText(this.items[this.selectedIndex].description);
   }
 
+  /**
+   * 音量スライダーを描画する
+   */
+  private drawVolumeSlider(
+    graphics: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    width: number,
+    volume: number
+  ): void {
+    graphics.clear();
+
+    // 0～100の範囲に制限
+    const safeVolume = Phaser.Math.Clamp(volume, 0, 100);
+
+    // 現在の音量からつまみのX座標を計算
+    const knobX = x + (safeVolume / 100) * width;
+
+    // スライダーの背景
+    graphics.lineStyle(6, 0x334155, 1);
+    graphics.lineBetween(x, y, x + width, y);
+
+    // 現在の音量部分
+    graphics.lineStyle(6, 0x38bdf8, 1);
+    graphics.lineBetween(x, y, knobX, y);
+
+    // 10%ごとの目盛り
+    for (let i = 0; i <= 10; i++) {
+      const tickX = x + (i / 10) * width;
+
+      graphics.lineStyle(2, 0x94a3b8, 0.8);
+      graphics.lineBetween(
+        tickX,
+        y - 6,
+        tickX,
+        y + 6
+      );
+    }
+
+    // 現在位置のつまみ
+    graphics.fillStyle(0xfde047, 1);
+    graphics.fillCircle(knobX, y, 8);
+
+    graphics.lineStyle(2, 0xffffff, 1);
+    graphics.strokeCircle(knobX, y, 8);
+  }
+
+  /**
+   * マウスのX座標から音量を変更する
+   */
+  private updateVolumeFromPointer(
+    key: 'bgm' | 'se' | 'voice',
+    pointerX: number,
+    sliderX: number,
+    sliderWidth: number
+  ): void {
+
+    // マウス位置をスライダーの範囲内に制限
+    const clickX = Phaser.Math.Clamp(
+      pointerX - sliderX,
+      0,
+      sliderWidth
+    );
+
+    // 0～10のどの目盛りに近いか計算
+    const step = Math.round(
+      (clickX / sliderWidth) * 10
+    );
+
+    // 0, 10, 20 ... 100 にする
+    const newVolume = step * 10;
+
+    // 設定を変更
+    if (key === 'bgm') {
+      this.settingsManager.setBgmVolume(newVolume);
+    } else if (key === 'se') {
+      this.settingsManager.setSeVolume(newVolume);
+    } else {
+      this.settingsManager.setVoiceVolume(newVolume);
+    }
+
+    // 数字とスライダーを更新
+    this.refreshValues();
+  }
+
   private refreshValues(): void {
     this.items.forEach((item, index) => {
+
+      // 数字表示を更新
       if (this.valueTexts[index] && item.getValueText) {
         this.valueTexts[index].setText(item.getValueText());
+      }
+
+      // 音量スライダーを更新
+      if (
+        item.key === 'bgm' ||
+        item.key === 'se' ||
+        item.key === 'voice'
+      ) {
+        const slider = this.volumeSliders.get(item.key);
+
+        if (!slider) {
+          return;
+        }
+
+        let volume = 0;
+
+        if (item.key === 'bgm') {
+          volume = this.settingsManager.bgmVolume;
+        } else if (item.key === 'se') {
+          volume = this.settingsManager.seVolume;
+        } else {
+          volume = this.settingsManager.voiceVolume;
+        }
+
+        const startY = 104;
+        const itemHeight = 36;
+        const boxW = 720;
+        const boxX = (GAME_CONFIG.WIDTH - boxW) / 2;
+
+        const y = startY + index * itemHeight;
+
+        this.drawVolumeSlider(
+          slider,
+          boxX + 400,
+          y,
+          180,
+          volume
+        );
       }
     });
   }
