@@ -583,8 +583,8 @@ export class TitleScene extends Phaser.Scene {
     overlay.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
     container.add(overlay);
 
-    const boxW = 620;
-    const boxH = 340;
+    const boxW = 700;
+    const boxH = lines.length >= 12 ? 420 : 340;
     const boxX = (GAME_CONFIG.WIDTH - boxW) / 2;
     const boxY = (GAME_CONFIG.HEIGHT - boxH) / 2;
 
@@ -612,10 +612,12 @@ export class TitleScene extends Phaser.Scene {
     });
     container.add(bodyText);
 
-    const closeBtn = this.add.text(GAME_CONFIG.WIDTH / 2, boxY + boxH - 30, '【 閉じる (ESC / クリック) 】', {
+    const closeBtn = this.add.text(GAME_CONFIG.WIDTH / 2, boxY + boxH + 24, '【 閉じる (ESC / クリック) 】', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '15px',
       color: '#f6d365',
+      stroke: '#000',
+      strokeThickness: 3,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     closeBtn.on('pointerdown', () => this.closeModal());
