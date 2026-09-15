@@ -205,17 +205,17 @@ export class TitleScene extends Phaser.Scene {
     const leftX = 270;
     const logoY = 115;
 
-    this.titleIcon = this.add.image(726, 270, 'titleIcon')
-      .setDisplaySize(438, 438)
-      .setDepth(1);
-    this.mainUiContainer.add(this.titleIcon);
-
     const imageGlow = this.add.graphics().setDepth(-1);
     imageGlow.fillStyle(0x0755b8, 0.2);
     imageGlow.fillCircle(726, 270, 270);
     imageGlow.fillStyle(0x22d3ee, 0.08);
     imageGlow.fillCircle(726, 270, 315);
     this.mainUiContainer.add(imageGlow);
+
+    this.titleIcon = this.add.image(726, 270, 'titleIcon')
+      .setDisplaySize(438, 438)
+      .setDepth(1);
+    this.mainUiContainer.add(this.titleIcon);
 
     this.tweens.add({
       targets: this.titleIcon,

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
+import { preloadPostStageAssets } from '../managers/AssetPreloader';
 import { SettingsManager } from '../managers/SettingsManager';
 
 interface GameOverData {
@@ -38,10 +39,7 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image('game-over-illustration', 'assets/sprites/DefineSprite_1191/2.png');
-    this.load.audio('game-over-bgm', 'assets/bgm/残念.mp3');
-    this.load.audio('gameOverSelect', '/assets/se/301(選択画面).mp3');
-    this.load.audio('gameOverConfirm', '/assets/se/302(決定音).mp3');
+    preloadPostStageAssets(this);
   }
 
   create(): void {

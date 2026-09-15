@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
+import { preloadStage1Assets } from '../managers/AssetPreloader';
 import { SettingsManager } from '../managers/SettingsManager';
 import { OPENING_TIMELINE, OpeningSegmentId, getOpeningSegment } from './opening/OpeningTimeline';
 import { OpeningCutContext } from './opening/OpeningCutContext';
@@ -57,6 +58,7 @@ export class OpeningScene extends Phaser.Scene {
     this.load.image('opening_usako_scene6_1', 'assets/picture/player/DefineSprite_44/1.png');
     this.load.image('opening_nekoko_scene6_3', 'assets/picture/player/DefineSprite_54/3.png');
     this.load.image('opening_keroko_scene6_4', 'assets/picture/player/DefineSprite_190/4.png');
+    preloadStage1Assets(this);
   }
 
   create(): void {

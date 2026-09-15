@@ -17,6 +17,7 @@ import { EnemyFactory } from '../managers/EnemyFactory';
 import { StageManager } from '../managers/StageManager';
 import { SettingsManager } from '../managers/SettingsManager';
 import { SaveManager } from '../managers/SaveManager';
+import { preloadPostStageAssets, preloadStage1Assets } from '../managers/AssetPreloader';
 import { DialogueWindow } from '../ui/DialogueWindow';
 import { StoryManager } from '../managers/StoryManager';
 
@@ -105,19 +106,7 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image('player-base', 'assets/picture/player/DefineSprite_145/1.png');
-    this.load.image('player-wing-1', 'assets/picture/player/DefineSprite_149/1.png');
-    this.load.image('player-wing-3', 'assets/picture/player/DefineSprite_149/3.png');
-    this.load.image('player-hit', 'assets/picture/player/DefineSprite_168/90.png');
-    this.load.image('dialogue-usako', 'assets/picture/player/DefineSprite_44/1.png');
-    this.load.image('dialogue-nekoko', 'assets/picture/player/DefineSprite_54/1.png');
-    this.load.image('dialogue-keroko', 'assets/picture/player/DefineSprite_190/4.png');
-    this.load.audio('stage_bgm', 'assets/bgm/1226(ステージテーマ).mp3');
-    this.load.audio('boss_bgm', 'assets/bgm/1283(ボス出現).mp3');
-    this.load.audio('se_enemy_defeat', 'assets/se/311(敵撃破音).mp3');
-    this.load.audio('se_player_hit', 'assets/se/153(被弾).mp3');
-    this.load.audio('se_player_game_over', 'assets/se/307(やられちゃった).mp3');
-    this.load.audio('se_boss_alert', 'assets/se/1266(ボス出現アラート).mp3');
+    preloadStage1Assets(this);
   }
 
   create(): void {
@@ -141,6 +130,12 @@ export class ShootingScene extends Phaser.Scene {
 
     this.createHud();
     this.startGame();
+
+    // プレイ開始後に次の遷移先の素材をロードし、ゲーム進行を止めない。
+    this.time.delayedCall(500, () => {
+      preloadPostStageAssets(this);
+      if (!this.load.isLoading()) this.load.start();
+    });
 
     this.input.keyboard!.on('keydown-ENTER', () => {
       if (this.mode === 'stageClear') {
