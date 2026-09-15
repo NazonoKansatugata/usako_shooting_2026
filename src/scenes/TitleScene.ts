@@ -331,7 +331,7 @@ export class TitleScene extends Phaser.Scene {
         description: '一人でステージを攻略するメインモードを開始します。',
         action: () => {
           this.titleBgm?.stop();
-          this.scene.start('shooting');
+          this.scene.start('status', { mode: 'gameStart', twoPlayer: false });
         },
       },
       {
@@ -339,7 +339,7 @@ export class TitleScene extends Phaser.Scene {
         description: '2人で協力してステージを攻略できるモードです。',
         action: () => {
           this.titleBgm?.stop();
-          this.scene.start('shooting', { twoPlayer: true });
+          this.scene.start('status', { mode: 'gameStart', twoPlayer: true });
         },
       },
       {
