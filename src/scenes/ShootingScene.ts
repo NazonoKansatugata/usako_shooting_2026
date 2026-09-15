@@ -108,6 +108,10 @@ export class ShootingScene extends Phaser.Scene {
 
   preload(): void {
     preloadStage1Assets(this);
+    StageManager.getEnemyImagePaths().forEach((path) => {
+      const key = `stage-enemy-${path}`;
+      if (!this.textures.exists(key)) this.load.image(key, path);
+    });
   }
 
   create(): void {
@@ -404,13 +408,18 @@ export class ShootingScene extends Phaser.Scene {
       for (const event of dueEvents) {
         const fromLeft = event.from === 'left';
         const spawnX = fromLeft ? -30 : GAME_CONFIG.WIDTH + 30;
-        const velocityX = (fromLeft ? event.speed : -event.speed) * ShootingScene.SPEED_MULTIPLIER;
-        const velocityY = (event.vy ?? 0) * ShootingScene.SPEED_MULTIPLIER;
-        const canShoot = event.type === 'shooter';
         const shape = event.shape ?? 'triangle';
+        // 高速進入敵はステージJSONで低速値を指定しても最低500px/秒で突入する。
+        const speed = shape === 'dashRetreat' ? Math.max(event.speed, 500) : event.speed;
+        const velocityX = (fromLeft ? speed : -speed) * ShootingScene.SPEED_MULTIPLIER;
+        const velocityY = (event.vy ?? 0) * ShootingScene.SPEED_MULTIPLIER;
+        const canShoot = event.type === 'shooter' || event.shape === 'straightShooter';
+        const texturePath = this.stageManager.current.enemyImages?.[shape];
+        const textureKey = texturePath ? `stage-enemy-${texturePath}` : undefined;
+        const defaultHp = shape === 'dashRetreat' ? 10 : 1;
         EnemyFactory.create(
           this, this.enemyGroups[shape], shape, spawnX, event.y, velocityX, velocityY,
-          event.crossX, canShoot, ShootingScene.SHOOT_DELAY_AFTER_ENTRY,
+          event.crossX, canShoot, ShootingScene.SHOOT_DELAY_AFTER_ENTRY, event.hp ?? defaultHp, textureKey,
         );
       }
     }
@@ -585,10 +594,12 @@ export class ShootingScene extends Phaser.Scene {
     const enemy = object2;
     if (!bullet || !enemy || !bullet.active || !enemy.active) return;
     bullet.disableBody(true, true);
-    enemy.disableBody(true, true);
-    this.sound.play('se_enemy_defeat', { volume: 0.45 });
-    this.score += ShootingScene.SCORE_ENEMY_DEFEAT;
-    this.updateHud();
+    if (enemy.takeDamage()) {
+      enemy.disableBody(true, true);
+      this.sound.play('se_enemy_defeat', { volume: 0.45 });
+      this.score += ShootingScene.SCORE_ENEMY_DEFEAT;
+      this.updateHud();
+    }
   }
 
   private hitBoss(object1: any, object2: any): void {

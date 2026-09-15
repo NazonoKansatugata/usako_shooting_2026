@@ -4,6 +4,8 @@ import { TriangleEnemy } from '../entities/enemies/TriangleEnemy';
 import { CircleEnemy } from '../entities/enemies/CircleEnemy';
 import { SquareEnemy } from '../entities/enemies/SquareEnemy';
 import { StarEnemy } from '../entities/enemies/StarEnemy';
+import { StraightShooterEnemy } from '../entities/enemies/StraightShooterEnemy';
+import { DashRetreatEnemy } from '../entities/enemies/DashRetreatEnemy';
 import { EnemyShape } from '../types';
 
 export class EnemyFactory {
@@ -24,13 +26,15 @@ export class EnemyFactory {
     crossX?: number,
     canShoot = false,
     shootDelay = 0,
+    hp = 1,
+    texture?: string,
   ): Enemy {
     let enemy = group.getFirstDead(false) as Enemy;
     if (!enemy) {
       enemy = EnemyFactory.instantiate(scene, shape, x, y);
       group.add(enemy);
     }
-    enemy.spawn(x, y, speedX, speedY, crossX, canShoot, shootDelay);
+    enemy.spawn(x, y, speedX, speedY, crossX, canShoot, shootDelay, hp, texture);
     return enemy;
   }
 
@@ -42,6 +46,10 @@ export class EnemyFactory {
         return new SquareEnemy(scene, x, y);
       case 'star':
         return new StarEnemy(scene, x, y);
+      case 'straightShooter':
+        return new StraightShooterEnemy(scene, x, y);
+      case 'dashRetreat':
+        return new DashRetreatEnemy(scene, x, y);
       case 'triangle':
       default:
         return new TriangleEnemy(scene, x, y);
