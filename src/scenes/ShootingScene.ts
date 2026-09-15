@@ -9,6 +9,7 @@ import { Stage3Boss } from '../entities/bosses/Stage3Boss';
 import { Bullet } from '../entities/Bullet';
 import { HomingBullet } from '../entities/HomingBullet';
 import { WaveBullet } from '../entities/WaveBullet';
+import { PickupItem } from '../entities/PickupItem';
 import { Enemy } from '../entities/Enemy';
 import { CircleEnemy } from '../entities/enemies/CircleEnemy';
 import { SquareEnemy } from '../entities/enemies/SquareEnemy';
@@ -17,6 +18,7 @@ import { EnemyFactory } from '../managers/EnemyFactory';
 import { StageManager } from '../managers/StageManager';
 import { SettingsManager } from '../managers/SettingsManager';
 import { SaveManager } from '../managers/SaveManager';
+import { StatusManager } from '../managers/StatusManager';
 import { preloadPostStageAssets, preloadStage1Assets } from '../managers/AssetPreloader';
 import { DialogueWindow } from '../ui/DialogueWindow';
 import { StoryManager } from '../managers/StoryManager';
@@ -51,10 +53,13 @@ export class ShootingScene extends Phaser.Scene {
   private enemyWaveBullets!: Phaser.Physics.Arcade.Group;
   /** ステージ1ボスの渦巻き弾幕専用のプール（高レートで大量に撒くため専用にしている） */
   private bossBallBullets!: Phaser.Physics.Arcade.Group;
+  /** 敵撃破時にドロップするステータスポイントアイテムのプール */
+  private pickups!: Phaser.Physics.Arcade.Group;
   private boss?: Boss;
   private stageManager = new StageManager();
   private settingsManager = SettingsManager.getInstance();
   private saveManager = SaveManager.getInstance();
+  private statusManager = StatusManager.getInstance();
   private dialogueWindow!: DialogueWindow;
   private storyManager!: StoryManager;
   private stageBgm?: Phaser.Sound.BaseSound;
@@ -162,7 +167,13 @@ export class ShootingScene extends Phaser.Scene {
 
     this.input.keyboard!.on('keydown-ENTER', () => {
       if (this.mode === 'stageClear') {
-        this.startNextStage();
+        this.scene.pause();
+        this.scene.launch('status', {
+          mode: 'stageClear',
+          twoPlayer: this.twoPlayer,
+          score: this.score,
+          stageNumber: this.stageManager.stageNumber,
+        });
       } else if (this.mode === 'gameOver' || this.mode === 'clear') {
         this.startGame();
       }
@@ -263,6 +274,7 @@ export class ShootingScene extends Phaser.Scene {
     graphics.fillStyle(0x9aa0a6).fillRect(0, 0, 10, 10).generateTexture('player-air-cannon', 10, 10);
     graphics.clear().fillStyle(0xffc857).fillCircle(12, 12, 12).generateTexture('bullet', 24, 24);
     graphics.clear().fillStyle(0xff4d6d).fillCircle(8, 8, 8).generateTexture('enemyBullet', 16, 16);
+    graphics.clear().fillStyle(0xfde047).fillCircle(8, 8, 8).lineStyle(2, 0xf8f7f2, 1).strokeCircle(8, 8, 8).generateTexture('pickup-point', 16, 16);
     graphics.destroy();
   }
 
@@ -295,6 +307,7 @@ export class ShootingScene extends Phaser.Scene {
     this.enemyHomingBullets = this.physics.add.group({ defaultKey: 'enemyBullet', maxSize: 20 });
     this.enemyWaveBullets = this.physics.add.group({ defaultKey: 'enemyBullet', maxSize: 20 });
     this.bossBallBullets = this.physics.add.group({ defaultKey: 'enemyBullet', maxSize: 200 });
+    this.pickups = this.physics.add.group({ maxSize: 20 });
   }
 
   private forEachEnemyGroup(fn: (group: Phaser.Physics.Arcade.Group) => void): void {
@@ -336,6 +349,7 @@ export class ShootingScene extends Phaser.Scene {
     this.enemyHomingBullets.clear(true, true);
     this.enemyWaveBullets.clear(true, true);
     this.bossBallBullets.clear(true, true);
+    this.pickups.clear(true, true);
 
     if (this.player1?.active) this.player1.destroy();
     if (this.player2?.active) this.player2.destroy();
@@ -360,6 +374,7 @@ export class ShootingScene extends Phaser.Scene {
       this.physics.add.overlap(this.enemyHomingBullets, player, this.hitPlayer, undefined, this);
       this.physics.add.overlap(this.enemyWaveBullets, player, this.hitPlayer, undefined, this);
       this.physics.add.overlap(this.bossBallBullets, player, this.hitPlayer, undefined, this);
+      this.physics.add.overlap(this.pickups, player, this.collectPickup, undefined, this);
     }
 
     this.banner.setVisible(false);
@@ -489,6 +504,7 @@ export class ShootingScene extends Phaser.Scene {
     this.enemyHomingBullets.clear(true, true);
     this.enemyWaveBullets.clear(true, true);
     this.bossBallBullets.clear(true, true);
+    this.pickups.clear(true, true);
 
     const clearSeconds = (this.stageTime / 1000).toFixed(1);
     const hp1 = Math.max(0, this.player1.hp);
@@ -669,6 +685,7 @@ export class ShootingScene extends Phaser.Scene {
     this.enemyHomingBullets.clear(true, true);
     this.enemyWaveBullets.clear(true, true);
     this.bossBallBullets.clear(true, true);
+    this.pickups.clear(true, true);
 
     const centerY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
     this.player1.resetStats();
@@ -707,6 +724,7 @@ export class ShootingScene extends Phaser.Scene {
     this.enemyHomingBullets.clear(true, true);
     this.enemyWaveBullets.clear(true, true);
     this.bossBallBullets.clear(true, true);
+    this.pickups.clear(true, true);
 
     const centerY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
     this.player1.resetStats();
@@ -755,18 +773,32 @@ export class ShootingScene extends Phaser.Scene {
     if (!player.active || !isDown) return;
     const timer = slot === 1 ? this.fireTimer1 : this.fireTimer2;
     if (timer > 0) return;
-    if (slot === 1) this.fireTimer1 = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
-    else this.fireTimer2 = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
+
+    const status = this.statusManager.getData(player.variant);
+    const fireInterval = Math.max(
+      GAME_CONFIG.MIN_PLAYER_FIRE_INTERVAL,
+      GAME_CONFIG.PLAYER_FIRE_INTERVAL - status.dex * GAME_CONFIG.DEX_FIRE_INTERVAL_STEP,
+    );
+    if (slot === 1) this.fireTimer1 = fireInterval;
+    else this.fireTimer2 = fireInterval;
 
     const bx = player.x + 20;
     const by = player.y;
-
-    let bullet = this.bullets.getFirstDead(false) as Bullet;
-    if (!bullet) {
-      bullet = new Bullet(this, bx, by, 'bullet');
-      this.bullets.add(bullet);
+    const power = 1 + status.wep * GAME_CONFIG.WEP_DAMAGE_PER_LEVEL;
+    const extraShots = Math.floor(status.str / GAME_CONFIG.STR_EXTRA_SHOT_EVERY);
+    const shotOffsets = [0];
+    for (let i = 1; i <= extraShots; i++) {
+      shotOffsets.push(i * 14, -i * 14);
     }
-    bullet.fire(bx, by, 520, 0);
+
+    for (const offsetY of shotOffsets) {
+      let bullet = this.bullets.getFirstDead(false) as Bullet;
+      if (!bullet) {
+        bullet = new Bullet(this, bx, by, 'bullet');
+        this.bullets.add(bullet);
+      }
+      bullet.fire(bx, by + offsetY, 520, 0, power);
+    }
   }
 
   private updateEnemies(): void {
@@ -964,27 +996,51 @@ export class ShootingScene extends Phaser.Scene {
 
   private hitEnemy(object1: any, object2: any): void {
     // overlap(this.bullets, group, ...)で登録しているため、常にobject1=弾, object2=敵
-    const bullet = object1;
-    const enemy = object2;
+    const bullet: Bullet = object1;
+    const enemy: Enemy = object2;
     if (!bullet || !enemy || !bullet.active || !enemy.active) return;
+    const power = bullet.power;
     bullet.disableBody(true, true);
-    if (enemy.takeDamage()) {
+    if (enemy.takeDamage(power)) {
+      const { x, y } = enemy;
       enemy.disableBody(true, true);
       this.sound.play('se_enemy_defeat', { volume: this.seVolume(0.45) });
       this.score += ShootingScene.SCORE_ENEMY_DEFEAT;
+      this.spawnPickup(x, y);
       this.updateHud();
     }
   }
 
+  /** 敵撃破位置にステータスポイントアイテムをドロップする */
+  private spawnPickup(x: number, y: number): void {
+    let pickup = this.pickups.getFirstDead(false) as PickupItem;
+    if (!pickup) {
+      pickup = new PickupItem(this, x, y);
+      this.pickups.add(pickup);
+    }
+    pickup.spawn(x, y);
+  }
+
+  /** 自機がステータスポイントアイテムに触れたときの処理 */
+  private collectPickup(object1: any, object2: any): void {
+    const pickup: PickupItem = object1 instanceof PickupItem ? object1 : object2;
+    const player: Player = object1 instanceof Player ? object1 : object2;
+    if (!pickup || !player || !pickup.active || !player.active) return;
+    pickup.disableBody(true, true);
+    this.statusManager.addPoint(player.variant);
+  }
+
   private hitBoss(object1: any, object2: any): void {
     if (this.bossDefeated) return;
-    const bullet = (object1 === this.boss) ? object2 : object1;
+    const bullet: Bullet = (object1 === this.boss) ? object2 : object1;
     if (!bullet || !bullet.active || !this.boss || !this.boss.active) return;
+    const power = bullet.power ?? 1;
     bullet.disableBody(true, true);
-    const defeated = this.boss.takeDamage(1);
+    const defeated = this.boss.takeDamage(power);
     if (defeated) {
       this.bossDefeated = true;
       this.score += ShootingScene.SCORE_BOSS_DEFEAT;
+      this.spawnPickup(this.boss.x, this.boss.y);
       // takeDamage()内でactiveが即falseになりupdateHud()の分岐に乗らなくなるため、撃破時点のHPを明示的に0で反映する
       this.progressText.setText(`BOSS  0 / ${this.bossMaxHp}`);
       this.scoreText.setText(`SCORE  ${this.score}`);

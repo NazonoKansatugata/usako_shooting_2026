@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
 import { SettingsManager } from '../managers/SettingsManager';
+import { StatusManager } from '../managers/StatusManager';
 
 export type PlayerVariant = 'p1' | 'p2';
 
@@ -42,10 +43,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private readonly wingOffsetY: number;
   private isDying = false;
 
+  /** ステータス画面(StatusManager)でどちらのプレイヤーの割り振りを参照するかを示すキー */
+  public readonly variant: PlayerVariant;
+
   /** label（例:"1P"/"2P"）を渡すと、機体の少し上に追従する識別ラベルを表示する（2人プレイでの見分け用）。 */
   constructor(scene: Phaser.Scene, x: number, y: number, variant: PlayerVariant = 'p1', label?: string) {
     const textures = PLAYER_TEXTURES[variant];
     super(scene, x, y, textures.base);
+    this.variant = variant;
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setScale(Player.SCALE);
@@ -234,7 +239,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const settings = SettingsManager.getInstance();
     // 難易度設定(難だと敵から受けるダメージが2倍になる)
     const baseDamage = customDamage ?? (settings.difficulty === 'hard' ? 2 : 1);
-    this._hp -= baseDamage;
+    // DEFレベルに応じて被ダメージを軽減する（無敵化を防ぐため最低1ダメージは保証する）
+    const defLevel = StatusManager.getInstance().getData(this.variant).def;
+    const actualDamage = Math.max(1, baseDamage - Math.floor(defLevel / 2));
+    this._hp -= actualDamage;
     if (this._hp <= 0) {
       this._hp = 0;
       return true; // 死亡
