@@ -13,16 +13,16 @@ type HitPlayerFn = (object1: any, object2: any) => void;
  */
 export class Hazard {
   private readonly scene: Phaser.Scene;
-  private readonly player: Phaser.Physics.Arcade.Sprite;
+  private readonly players: Phaser.Physics.Arcade.Sprite[];
   private readonly hitPlayer: HitPlayerFn;
   private readonly visual: Phaser.GameObjects.Shape;
-  private collider?: Phaser.Physics.Arcade.Collider;
+  private colliders: Phaser.Physics.Arcade.Collider[] = [];
   private pendingTimer?: Phaser.Time.TimerEvent;
   private state: 'idle' | 'warning' | 'active' | 'done' = 'idle';
 
-  constructor(scene: Phaser.Scene, shape: HazardShape, player: Phaser.Physics.Arcade.Sprite, hitPlayer: HitPlayerFn) {
+  constructor(scene: Phaser.Scene, shape: HazardShape, players: Phaser.Physics.Arcade.Sprite[], hitPlayer: HitPlayerFn) {
     this.scene = scene;
-    this.player = player;
+    this.players = players;
     this.hitPlayer = hitPlayer;
 
     this.visual =
@@ -74,7 +74,9 @@ export class Hazard {
     (this.visual as Phaser.GameObjects.Rectangle).setFillStyle(0xff3b3b, 0.75);
     const body = this.visual.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
-    this.collider = this.scene.physics.add.overlap(this.player, this.visual, this.hitPlayer, undefined, this.scene);
+    this.colliders = this.players.map((player) =>
+      this.scene.physics.add.overlap(player, this.visual, this.hitPlayer, undefined, this.scene),
+    );
     this.pendingTimer = this.scene.time.delayedCall(activeMs, () => this.enterDone());
   }
 
@@ -83,7 +85,7 @@ export class Hazard {
     this.visual.setVisible(false);
     const body = this.visual.body as Phaser.Physics.Arcade.Body;
     body.enable = false;
-    this.collider?.destroy();
-    this.collider = undefined;
+    this.colliders.forEach((collider) => collider.destroy());
+    this.colliders = [];
   }
 }

@@ -337,7 +337,10 @@ export class TitleScene extends Phaser.Scene {
       {
         text: '二人プレイ (2P)',
         description: '2人で協力してステージを攻略できるモードです。',
-        action: () => this.showTwoPlayerModal(),
+        action: () => {
+          this.titleBgm?.stop();
+          this.scene.start('shooting', { twoPlayer: true });
+        },
       },
       {
         text: '遊び方 (How to Play)',
@@ -531,26 +534,16 @@ export class TitleScene extends Phaser.Scene {
     this.descText.setText(this.menuItems[this.selectedIndex].description);
   }
 
-  private showTwoPlayerModal(): void {
-    this.showModal('二人プレイ (2 PLAYERS)', [
-      '【2人協力プレイモード】',
-      '',
-      '現在開発中の機能です！',
-      '',
-      '・2人で協力して迫り来る敵ステージを攻略',
-      '・2人プレイ専用の掛け合い会話演出',
-      '・バランス調整とコンビネーションアタック',
-      '',
-      '※今後のアップデートで開放予定となります。お楽しみに！',
-    ]);
-  }
-
   private showHowToPlayModal(): void {
     this.showModal('遊び方 (HOW TO PLAY)', [
       '【基本操作】',
       '・移動　　： [↑ ↓ ← →] または [W / A / S / D] キー',
       '・ショット： [SPACE] キー (押し続けると連射)',
       '・ポーズ　： [ESC] または [P] キー',
+      '',
+      '【二人プレイ (2P) 操作】',
+      '・P1　　　： 移動 [W / A / S / D]　ショット [左Shift]',
+      '・P2　　　： 移動 [↑ ↓ ← →]　ショット [SPACE]',
       '',
       '【ゲームルール】',
       '・迫り来る敵をショットで撃破しながら進みましょう。',

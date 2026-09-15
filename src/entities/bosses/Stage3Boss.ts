@@ -43,7 +43,7 @@ export class Stage3Boss extends Boss {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    private readonly player: Phaser.Physics.Arcade.Sprite,
+    private readonly getPlayers: () => Phaser.Physics.Arcade.Sprite[],
     private readonly hitPlayer: HitPlayerFn,
     private readonly enemyBulletsPool: Phaser.Physics.Arcade.Group,
     private readonly bulletInterval: number,
@@ -84,7 +84,8 @@ export class Stage3Boss extends Boss {
   }
 
   private fireFanBarrage(): void {
-    const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, this.player.x, this.player.y);
+    const target = this.nearestPlayer(this.getPlayers());
+    const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
     const count = Stage3Boss.FAN_BULLET_COUNT;
     const stepDeg = Stage3Boss.FAN_SPREAD_DEG / (count - 1);
     for (let i = 0; i < count; i++) {
@@ -106,6 +107,8 @@ export class Stage3Boss extends Boss {
     this.beamInProgress = true;
 
     const warningMs = this.hpRatio < Stage3Boss.HP_THRESHOLD ? Stage3Boss.WARNING_MS_LOW : Stage3Boss.WARNING_MS_BASE;
+    const players = this.getPlayers();
+    const target = this.nearestPlayer(players);
 
     // 縦：3レーンから2つを選んで縦ビーム（残り1レーンが安全地帯）
     const laneIndices = Phaser.Utils.Array.Shuffle([0, 1, 2]).slice(0, 2);
@@ -113,7 +116,7 @@ export class Stage3Boss extends Boss {
       const hazard = new Hazard(
         this.scene,
         { kind: 'rect', width: Stage3Boss.BEAM_WIDTH, height: GAME_CONFIG.PLAY_AREA.HEIGHT },
-        this.player,
+        players,
         this.hitPlayer,
       );
       hazard.trigger(Stage3Boss.LANE_X[idx], GAME_CONFIG.PLAY_AREA.HEIGHT / 2, warningMs, Stage3Boss.ACTIVE_MS);
@@ -121,11 +124,11 @@ export class Stage3Boss extends Boss {
     }
 
     // 横：縦ビームと同時に、自機の高さ付近に横一直線のビームも発射（警告帯の外が安全地帯）
-    const beamY = Phaser.Math.Clamp(this.player.y, Stage3Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage3Boss.BEAM_Y_MARGIN);
+    const beamY = Phaser.Math.Clamp(target.y, Stage3Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage3Boss.BEAM_Y_MARGIN);
     const horizontalHazard = new Hazard(
       this.scene,
       { kind: 'rect', width: GAME_CONFIG.PLAY_AREA.WIDTH, height: Stage3Boss.HORIZONTAL_BEAM_HEIGHT },
-      this.player,
+      players,
       this.hitPlayer,
     );
     horizontalHazard.trigger(GAME_CONFIG.PLAY_AREA.WIDTH / 2, beamY, warningMs, Stage3Boss.ACTIVE_MS);

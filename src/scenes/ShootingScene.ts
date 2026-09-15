@@ -38,7 +38,9 @@ export class ShootingScene extends Phaser.Scene {
   /** 雑魚敵の移動速度（ステージJSONのspeed/vy）に一律で掛ける倍率 */
   private static readonly SPEED_MULTIPLIER = 1.5;
 
-  private player!: Player;
+  private player1!: Player;
+  private player2?: Player;
+  private twoPlayer = false;
   private bullets!: Phaser.Physics.Arcade.Group;
   /** 敵の形状（見た目・当たり判定）ごとに分けたプール。異なる形状の個体が混ざらないようにするため。 */
   private enemyGroups!: Record<EnemyShape, Phaser.Physics.Arcade.Group>;
@@ -65,7 +67,8 @@ export class ShootingScene extends Phaser.Scene {
   private mode: GameMode = 'playing';
 
   private stageTime = 0;
-  private fireTimer = 0;
+  private fireTimer1 = 0;
+  private fireTimer2 = 0;
   private bossPreEventTriggered = false;
   private bossDefeated = false;
   private score = 0;
@@ -98,6 +101,7 @@ export class ShootingScene extends Phaser.Scene {
   ];
 
   private hpText!: Phaser.GameObjects.Text;
+  private hpText2!: Phaser.GameObjects.Text;
   private progressText!: Phaser.GameObjects.Text;
   private scoreText!: Phaser.GameObjects.Text;
   private banner!: Phaser.GameObjects.Text;
@@ -106,6 +110,10 @@ export class ShootingScene extends Phaser.Scene {
 
   constructor() {
     super('shooting');
+  }
+
+  init(data?: { twoPlayer?: boolean }): void {
+    this.twoPlayer = data?.twoPlayer ?? false;
   }
 
   preload(): void {
@@ -130,7 +138,7 @@ export class ShootingScene extends Phaser.Scene {
     this.createGroups();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
-    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,ENTER,ESC,P,T') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,SHIFT,ENTER,ESC,P,T') as Record<string, Phaser.Input.Keyboard.Key>;
 
     this.dialogueWindow = new DialogueWindow(this);
     this.storyManager = new StoryManager(this.dialogueWindow);
@@ -197,10 +205,13 @@ export class ShootingScene extends Phaser.Scene {
     if (!progressBlocked) {
       this.stageTime += delta;
     }
-    this.fireTimer -= delta;
+    this.fireTimer1 -= delta;
+    this.fireTimer2 -= delta;
 
-    this.player.move(this.cursors, this.keys);
-    this.firePlayerBullet();
+    this.updateMovement();
+    const p1FireDown = this.twoPlayer ? this.keys.SHIFT.isDown : this.keys.SPACE.isDown;
+    this.firePlayerBullet(this.player1, p1FireDown, 1);
+    if (this.twoPlayer && this.player2) this.firePlayerBullet(this.player2, this.keys.SPACE.isDown, 2);
     this.updateEnemies();
     this.updateHud();
     if (!progressBlocked) {
@@ -225,14 +236,22 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private createPlayerAnimation(): void {
-    if (this.anims.exists('player-flight')) return;
-
-    this.anims.create({
-      key: 'player-flight',
-      frames: [{ key: 'player-wing-1' }, { key: 'player-wing-3' }],
-      frameRate: 12,
-      repeat: -1,
-    });
+    if (!this.anims.exists('player-flight')) {
+      this.anims.create({
+        key: 'player-flight',
+        frames: [{ key: 'player-wing-1' }, { key: 'player-wing-3' }],
+        frameRate: 12,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists('player2-flight')) {
+      this.anims.create({
+        key: 'player2-flight',
+        frames: [{ key: 'player2-wing-1' }, { key: 'player2-wing-3' }],
+        frameRate: 12,
+        repeat: -1,
+      });
+    }
   }
 
   private createGroups(): void {
@@ -255,6 +274,7 @@ export class ShootingScene extends Phaser.Scene {
 
   private createHud(): void {
     this.hpText = this.add.text(24, 20, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '20px', color: '#f6d365' }).setDepth(5);
+    this.hpText2 = this.add.text(24, 46, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '20px', color: '#f6a3d3' }).setDepth(5).setVisible(false);
     this.scoreText = this.add.text(24, 46, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '16px', color: '#f8f7f2' }).setDepth(5);
     this.progressText = this.add.text(GAME_CONFIG.WIDTH - 24, 20, '', { fontFamily: GAME_CONFIG.FONT_FAMILY, fontSize: '18px', color: '#a9d6e5' }).setOrigin(1, 0).setDepth(5);
     this.banner = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2 - 35, '', {
@@ -270,7 +290,8 @@ export class ShootingScene extends Phaser.Scene {
     this.mode = 'playing';
     this.stageManager.reset();
     this.stageTime = 0;
-    this.fireTimer = 0;
+    this.fireTimer1 = 0;
+    this.fireTimer2 = 0;
     this.bossPreEventTriggered = false;
     this.bossDefeated = false;
     this.score = 0;
@@ -285,34 +306,85 @@ export class ShootingScene extends Phaser.Scene {
     this.enemyWaveBullets.clear(true, true);
     this.bossBallBullets.clear(true, true);
 
-    if (this.player?.active) this.player.destroy();
-    this.player = new Player(this, 130, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
-    this.player.resetStats();
+    if (this.player1?.active) this.player1.destroy();
+    if (this.player2?.active) this.player2.destroy();
+    const centerY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
+    this.player1 = new Player(this, 130, this.twoPlayer ? centerY - 40 : centerY, 'p1', this.twoPlayer ? '1P' : undefined);
+    this.player1.resetStats();
+    if (this.twoPlayer) {
+      this.player2 = new Player(this, 130, centerY + 40, 'p2', '2P');
+      this.player2.resetStats();
+    } else {
+      this.player2 = undefined;
+    }
 
     this.forEachEnemyGroup((group) => {
       this.physics.add.overlap(this.bullets, group, this.hitEnemy, undefined, this);
-      this.physics.add.overlap(group, this.player, this.hitPlayer, undefined, this);
     });
-    this.physics.add.overlap(this.enemyBullets, this.player, this.hitPlayer, undefined, this);
-    this.physics.add.overlap(this.enemyHomingBullets, this.player, this.hitPlayer, undefined, this);
-    this.physics.add.overlap(this.enemyWaveBullets, this.player, this.hitPlayer, undefined, this);
-    this.physics.add.overlap(this.bossBallBullets, this.player, this.hitPlayer, undefined, this);
+    for (const player of this.activePlayers()) {
+      this.forEachEnemyGroup((group) => {
+        this.physics.add.overlap(group, player, this.hitPlayer, undefined, this);
+      });
+      this.physics.add.overlap(this.enemyBullets, player, this.hitPlayer, undefined, this);
+      this.physics.add.overlap(this.enemyHomingBullets, player, this.hitPlayer, undefined, this);
+      this.physics.add.overlap(this.enemyWaveBullets, player, this.hitPlayer, undefined, this);
+      this.physics.add.overlap(this.bossBallBullets, player, this.hitPlayer, undefined, this);
+    }
 
     this.banner.setVisible(false);
     this.instruction.setVisible(false);
     this.hpText.setVisible(true);
+    this.hpText2.setVisible(this.twoPlayer);
+    this.scoreText.setY(this.twoPlayer ? 72 : 46);
     this.progressText.setVisible(true);
 
     this.storyManager.loadScenario(this.stageManager.current.id);
     this.playStageBgm();
     this.updateHud();
+
+    if (this.twoPlayer) this.showTwoPlayerControlHint();
+  }
+
+  private showTwoPlayerControlHint(): void {
+    this.banner.setText('2 PLAYERS').setVisible(true);
+    this.instruction.setText('P1：WASD + 左Shift　　P2：↑↓←→ + SPACE').setVisible(true);
+    this.time.delayedCall(2500, () => {
+      if (this.mode !== 'playing') return;
+      this.banner.setVisible(false);
+      this.instruction.setVisible(false);
+    });
+  }
+
+  /** HPが残っている（生存中の）プレイヤーのみを返す。死亡演出中でも即座に除外される。 */
+  private livingPlayers(): Player[] {
+    return [this.player1, this.player2].filter((p): p is Player => !!p && p.hp > 0);
+  }
+
+  /** 当たり判定登録・狙い撃ち計算用。生存者がいれば生存者のみ、全滅時はフォールバックとしてplayer1を含める。 */
+  private activePlayers(): Player[] {
+    const players = this.livingPlayers();
+    return players.length > 0 ? players : [this.player1];
+  }
+
+  /** 座標(x, y)に最も近い生存中のプレイヤーを返す（雑魚敵・ボスの狙い撃ち用）。 */
+  private nearestPlayer(x: number, y: number): Player {
+    const players = this.activePlayers();
+    return players.reduce((a, b) =>
+      Phaser.Math.Distance.Between(x, y, a.x, a.y) <= Phaser.Math.Distance.Between(x, y, b.x, b.y) ? a : b,
+    );
+  }
+
+  /** 2人プレイ時は基礎HPを2倍にしたボスの最大HP */
+  private get bossMaxHp(): number {
+    return this.stageManager.current.boss.hp * (this.twoPlayer ? GAME_CONFIG.BOSS_HP_MULTIPLIER_2P : 1);
   }
 
   /** ボス撃破後、次ステージへ進む前に見やすいリザルトカードを表示してプレイヤーの入力を待つ。 */
   private enterStageClear(clearedStage: number): void {
     this.mode = 'stageClear';
     this.stopBgm();
-    if (this.player?.active) this.player.setVelocity(0, 0);
+    if (this.player1?.active) this.player1.setVelocity(0, 0);
+    if (this.player2?.active) this.player2.setVelocity(0, 0);
 
     // 会話ウィンドウをクリアしてからステージクリア後演出を再生する
     this.dialogueWindow.hideDialogue();
@@ -327,16 +399,19 @@ export class ShootingScene extends Phaser.Scene {
     this.bossBallBullets.clear(true, true);
 
     const clearSeconds = (this.stageTime / 1000).toFixed(1);
-    const hp = Math.max(0, this.player.hp);
+    const hp1 = Math.max(0, this.player1.hp);
     this.saveManager.reportStageCleared(clearedStage, this.settingsManager.difficulty);
+    const hpLine = this.twoPlayer
+      ? `P1 ${hp1}/${GAME_CONFIG.PLAYER_HP}\nP2 ${Math.max(0, this.player2?.hp ?? 0)}/${GAME_CONFIG.PLAYER_HP}`
+      : `${hp1} / ${GAME_CONFIG.PLAYER_HP}`;
 
     this.banner.setVisible(false);
     this.instruction.setVisible(false);
-    this.showStageClearPanel(clearedStage, clearSeconds, hp);
+    this.showStageClearPanel(clearedStage, clearSeconds, hpLine);
   }
 
   /** 近未来SF風の洗練されたステージクリアリザルトパネルを生成・表示 */
-  private showStageClearPanel(clearedStage: number, clearSeconds: string, hp: number): void {
+  private showStageClearPanel(clearedStage: number, clearSeconds: string, hpLine: string): void {
     this.hideStageClearPanel();
 
     const panel = this.add.container(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2).setDepth(25);
@@ -418,11 +493,13 @@ export class ShootingScene extends Phaser.Scene {
       color: '#a9d6e5',
       fontStyle: 'bold',
     }).setOrigin(0.5);
-    const hpValue = this.add.text(cardXs[1] + cardW / 2, cardY + 58, `${hp} / ${GAME_CONFIG.PLAYER_HP}`, {
+    const hpValue = this.add.text(cardXs[1] + cardW / 2, cardY + 58, hpLine, {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '24px',
+      fontSize: this.twoPlayer ? '16px' : '24px',
       color: '#ffd166',
+      align: 'center',
       fontStyle: 'bold',
+      lineSpacing: 4,
       stroke: '#060d1b',
       strokeThickness: 3,
     }).setOrigin(0.5);
@@ -490,7 +567,8 @@ export class ShootingScene extends Phaser.Scene {
     this.hideStageClearPanel();
     this.mode = 'playing';
     this.stageTime = 0;
-    this.fireTimer = 0;
+    this.fireTimer1 = 0;
+    this.fireTimer2 = 0;
     this.bossPreEventTriggered = false;
     this.bossDefeated = false;
     this.boss = undefined;
@@ -500,9 +578,12 @@ export class ShootingScene extends Phaser.Scene {
     this.enemyWaveBullets.clear(true, true);
     this.bossBallBullets.clear(true, true);
 
-    if (this.player?.active) {
-      this.player.resetStats();
-      this.player.setPosition(130, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
+    const centerY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
+    this.player1.resetStats();
+    this.player1.setPosition(130, this.twoPlayer ? centerY - 40 : centerY);
+    if (this.twoPlayer && this.player2) {
+      this.player2.resetStats();
+      this.player2.setPosition(130, centerY + 40);
     }
 
     this.banner.setVisible(false);
@@ -520,7 +601,8 @@ export class ShootingScene extends Phaser.Scene {
     this.stopBgm();
     this.stageManager.jumpToStage(stageIndex);
     this.stageTime = 0;
-    this.fireTimer = 0;
+    this.fireTimer1 = 0;
+    this.fireTimer2 = 0;
     this.bossPreEventTriggered = false;
     this.bossDefeated = false;
 
@@ -534,12 +616,18 @@ export class ShootingScene extends Phaser.Scene {
     this.enemyWaveBullets.clear(true, true);
     this.bossBallBullets.clear(true, true);
 
-    this.player.resetStats();
-    this.player.setPosition(130, GAME_CONFIG.PLAY_AREA.HEIGHT / 2);
+    const centerY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
+    this.player1.resetStats();
+    this.player1.setPosition(130, this.twoPlayer ? centerY - 40 : centerY);
+    if (this.twoPlayer && this.player2) {
+      this.player2.resetStats();
+      this.player2.setPosition(130, centerY + 40);
+    }
 
     this.banner.setVisible(false);
     this.instruction.setVisible(false);
     this.hpText.setVisible(true);
+    this.hpText2.setVisible(this.twoPlayer);
     this.progressText.setVisible(true);
 
     if (toBoss) {
@@ -555,12 +643,31 @@ export class ShootingScene extends Phaser.Scene {
     this.updateHud();
   }
 
-  private firePlayerBullet(): void {
-    if (!this.keys.SPACE.isDown || this.fireTimer > 0) return;
-    this.fireTimer = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
+  /** 1人プレイ時は矢印・WASD両方をOR、2人プレイ時はplayer1=WASD/player2=矢印キーに分離する。 */
+  private updateMovement(): void {
+    if (!this.twoPlayer) {
+      this.player1.move(
+        this.cursors.left.isDown || this.keys.A.isDown,
+        this.cursors.right.isDown || this.keys.D.isDown,
+        this.cursors.up.isDown || this.keys.W.isDown,
+        this.cursors.down.isDown || this.keys.S.isDown,
+      );
+      return;
+    }
 
-    const bx = this.player.x + 20;
-    const by = this.player.y;
+    this.player1.move(this.keys.A.isDown, this.keys.D.isDown, this.keys.W.isDown, this.keys.S.isDown);
+    this.player2?.move(this.cursors.left.isDown, this.cursors.right.isDown, this.cursors.up.isDown, this.cursors.down.isDown);
+  }
+
+  private firePlayerBullet(player: Player, isDown: boolean, slot: 1 | 2): void {
+    if (!player.active || !isDown) return;
+    const timer = slot === 1 ? this.fireTimer1 : this.fireTimer2;
+    if (timer > 0) return;
+    if (slot === 1) this.fireTimer1 = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
+    else this.fireTimer2 = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
+
+    const bx = player.x + 20;
+    const by = player.y;
 
     let bullet = this.bullets.getFirstDead(false) as Bullet;
     if (!bullet) {
@@ -663,6 +770,7 @@ export class ShootingScene extends Phaser.Scene {
     const by = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
     const bossConfig = this.stageManager.current.boss;
     const hitPlayer = this.hitPlayer.bind(this);
+    const getPlayers = () => this.activePlayers();
 
     switch (this.stageManager.stageNumber) {
       case 1:
@@ -670,18 +778,18 @@ export class ShootingScene extends Phaser.Scene {
         break;
       case 2:
         this.boss = new Stage2Boss(
-          this, bx, by, this.player, hitPlayer, this.enemyBullets,
+          this, bx, by, getPlayers, hitPlayer, this.enemyBullets,
           bossConfig.bulletInterval, bossConfig.bulletSpeed,
         );
         break;
       default:
         this.boss = new Stage3Boss(
-          this, bx, by, this.player, hitPlayer, this.enemyBullets,
+          this, bx, by, getPlayers, hitPlayer, this.enemyBullets,
           bossConfig.bulletInterval, bossConfig.bulletSpeed,
         );
         break;
     }
-    this.boss.spawn(bx, by, bossConfig.hp);
+    this.boss.spawn(bx, by, this.bossMaxHp);
     this.stopBgm();
     const alertSound = this.sound.add('se_boss_alert', { volume: 0.7 });
     alertSound.once('complete', () => {
@@ -693,12 +801,15 @@ export class ShootingScene extends Phaser.Scene {
     this.time.delayedCall(1300, () => this.banner.setVisible(false));
 
     this.physics.add.overlap(this.bullets, this.boss, this.hitBoss, undefined, this);
-    this.physics.add.overlap(this.boss, this.player, this.hitPlayer, undefined, this);
+    for (const player of this.activePlayers()) {
+      this.physics.add.overlap(this.boss, player, this.hitPlayer, undefined, this);
+    }
   }
 
-  /** type:'shooter'の雑魚敵が出現した瞬間に、その場からプレイヤーへの角度で1発だけ自機狙い弾を撃つ。 */
+  /** type:'shooter'の雑魚敵が出現した瞬間に、その場から最寄りプレイヤーへの角度で1発だけ自機狙い弾を撃つ。 */
   private fireEnemyAimedShot(x: number, y: number): void {
-    const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
+    const target = this.nearestPlayer(x, y);
+    const angle = Phaser.Math.Angle.Between(x, y, target.x, target.y);
     const bulletSpeed = 430;
 
     let bullet = this.enemyBullets.getFirstDead(false) as Bullet;
@@ -709,9 +820,10 @@ export class ShootingScene extends Phaser.Scene {
     bullet.fire(x, y, Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed);
   }
 
-  /** 星型の雑魚敵：自機方向を中心に±40度を5等分した扇状に5発同時発射する。 */
+  /** 星型の雑魚敵：最寄りプレイヤー方向を中心に±40度を5等分した扇状に5発同時発射する。 */
   private fireEnemyFanShot(x: number, y: number): void {
-    const baseAngle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
+    const target = this.nearestPlayer(x, y);
+    const baseAngle = Phaser.Math.Angle.Between(x, y, target.x, target.y);
     const bulletSpeed = 415;
     const spreadDeg = 80;
     const count = 5;
@@ -730,9 +842,10 @@ export class ShootingScene extends Phaser.Scene {
     }
   }
 
-  /** 正方形の雑魚敵：発射後1秒だけ緩く自機へ軌道補正する弾を1発撃つ。 */
+  /** 正方形の雑魚敵：発射後1秒だけ緩く最寄りプレイヤーへ軌道補正する弾を1発撃つ。 */
   private fireEnemyHomingShot(x: number, y: number): void {
-    const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
+    const target = this.nearestPlayer(x, y);
+    const angle = Phaser.Math.Angle.Between(x, y, target.x, target.y);
     const bulletSpeed = 390;
 
     let bullet = this.enemyHomingBullets.getFirstDead(false) as HomingBullet;
@@ -740,12 +853,13 @@ export class ShootingScene extends Phaser.Scene {
       bullet = new HomingBullet(this, x, y, 'enemyBullet');
       this.enemyHomingBullets.add(bullet);
     }
-    bullet.fireHoming(x, y, Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed, this.player);
+    bullet.fireHoming(x, y, Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed, target);
   }
 
-  /** 丸の雑魚敵：自機方向へ直進しつつ、進行方向に対して垂直にサイン波で揺れる弾を1発撃つ。 */
+  /** 丸の雑魚敵：最寄りプレイヤー方向へ直進しつつ、進行方向に対して垂直にサイン波で揺れる弾を1発撃つ。 */
   private fireEnemyWaveShot(x: number, y: number): void {
-    const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
+    const target = this.nearestPlayer(x, y);
+    const angle = Phaser.Math.Angle.Between(x, y, target.x, target.y);
     const bulletSpeed = 400;
 
     let bullet = this.enemyWaveBullets.getFirstDead(false) as WaveBullet;
@@ -780,13 +894,14 @@ export class ShootingScene extends Phaser.Scene {
       this.bossDefeated = true;
       this.score += ShootingScene.SCORE_BOSS_DEFEAT;
       // takeDamage()内でactiveが即falseになりupdateHud()の分岐に乗らなくなるため、撃破時点のHPを明示的に0で反映する
-      this.progressText.setText(`BOSS  0 / ${this.stageManager.current.boss.hp}`);
+      this.progressText.setText(`BOSS  0 / ${this.bossMaxHp}`);
       this.scoreText.setText(`SCORE  ${this.score}`);
 
       // ボス撃破直後：敵弾・雑魚敵を一掃し、自機を無敵化して被弾事故を防ぐ
-      if (this.player?.active) {
-        this.player.setInvulnerable(true);
-        this.player.setVelocity(0, 0);
+      for (const player of [this.player1, this.player2]) {
+        if (!player?.active) continue;
+        player.setInvulnerable(true);
+        player.setVelocity(0, 0);
       }
       this.bullets.clear(true, true);
       this.forEachEnemyGroup((group) => group.clear(true, true));
@@ -900,8 +1015,9 @@ export class ShootingScene extends Phaser.Scene {
     const targetY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
 
     // 自機本体と羽・空気砲を一緒に中心へ回転・縮小しながら吸い込み
-    if (this.player?.active) {
-      this.player.startSuckInAnimation(targetX, targetY, 1100);
+    for (const player of [this.player1, this.player2]) {
+      if (!player?.active) continue;
+      player.startSuckInAnimation(targetX, targetY, 1100);
     }
 
     // 強烈なホワイトアウトで次のステージ/リザルトへ移行
@@ -918,34 +1034,41 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   private hitPlayer(object1: any, object2: any): void {
-    if (this.mode !== 'playing' || !this.player || !this.player.active || this.player.isInvulnerable) return;
+    if (this.mode !== 'playing') return;
+    const player: Player | undefined = object1 instanceof Player ? object1 : (object2 instanceof Player ? object2 : undefined);
+    if (!player || !player.active || player.isInvulnerable) return;
 
-    const hazard = (object1 === this.player) ? object2 : object1;
+    const hazard = (object1 === player) ? object2 : object1;
     // Hazard（警告ビーム・爆風）のvisualはSprite/Imageではない（Rectangle/Arc）のでdisableBody()を持たない。
     // そうしたhazardは接触しても消えず、自身のタイマーで自然に終了する仕様なのでここでは何もしない。
-    if (hazard && hazard.active && hazard !== this.boss && hazard !== this.player && typeof hazard.disableBody === 'function') {
+    if (hazard && hazard.active && hazard !== this.boss && !(hazard instanceof Player) && typeof hazard.disableBody === 'function') {
       hazard.disableBody(true, true);
     }
 
-    const dead = this.player.damage();
+    const dead = player.damage();
     this.sound.play('se_player_hit', { volume: 0.6 });
     this.updateHud();
 
     if (dead) {
-      this.sound.play('se_player_game_over', { volume: 0.8 });
-      this.finish('gameOver');
-    } else {
-      this.sound.play('se_player_hit', { volume: 0.6 });
+      const survivors = this.livingPlayers().filter((p) => p !== player);
+      if (survivors.length > 0) {
+        // このプレイヤーは撃墜されたが、相方が生きているのでゲームは続行する。
+        player.startDeathAnimation();
+      } else {
+        this.sound.play('se_player_game_over', { volume: 0.8 });
+        this.finish('gameOver', player);
+      }
     }
   }
 
-  private finish(mode: 'clear' | 'gameOver'): void {
+  private finish(mode: 'clear' | 'gameOver', lastPlayer?: Player): void {
     // 残った重なり判定や死亡演出中の接触から終了処理が重複しないようにする。
     if (this.mode !== 'playing') return;
     this.hideStageClearPanel();
     this.mode = mode;
     this.stopBgm();
-    if (this.player?.active) this.player.setVelocity(0, 0);
+    if (this.player1?.active) this.player1.setVelocity(0, 0);
+    if (this.player2?.active) this.player2.setVelocity(0, 0);
     this.bullets.setVelocityX(0);
     this.enemyBullets.setVelocity(0, 0);
     this.dialogueWindow.hideDialogue();
@@ -959,9 +1082,10 @@ export class ShootingScene extends Phaser.Scene {
 
     if (mode === 'gameOver') {
       this.hpText.setVisible(false);
+      this.hpText2.setVisible(false);
       this.scoreText.setVisible(false);
       this.progressText.setVisible(false);
-      this.player.startDeathAnimation(() => {
+      (lastPlayer ?? this.player1).startDeathAnimation(() => {
         this.gameOverTransitionTimer = this.time.delayedCall(ShootingScene.GAME_OVER_TRANSITION_DELAY, () => {
           this.gameOverTransitionTimer = undefined;
           if (this.mode !== 'gameOver') return;
@@ -1029,13 +1153,23 @@ export class ShootingScene extends Phaser.Scene {
     this.bossBgm?.stop();
   }
 
+  private hpLabel(label: string, hp: number): string {
+    return `${label}${'●'.repeat(hp)}${'○'.repeat(GAME_CONFIG.PLAYER_HP - hp)}`;
+  }
+
   private updateHud(): void {
-    const hp = this.player ? Math.max(0, this.player.hp) : GAME_CONFIG.PLAYER_HP;
-    this.hpText.setText(`HP  ${'●'.repeat(hp)}${'○'.repeat(GAME_CONFIG.PLAYER_HP - hp)}`);
+    const hp1 = this.player1 ? Math.max(0, this.player1.hp) : GAME_CONFIG.PLAYER_HP;
+    if (this.twoPlayer) {
+      this.hpText.setText(this.hpLabel('P1 HP  ', hp1));
+      const hp2 = this.player2 ? Math.max(0, this.player2.hp) : 0;
+      this.hpText2.setText(this.hpLabel('P2 HP  ', hp2));
+    } else {
+      this.hpText.setText(this.hpLabel('HP  ', hp1));
+    }
     this.scoreText.setText(`SCORE  ${this.score}`);
 
     if (this.boss && this.boss.active) {
-      this.progressText.setText(`BOSS  ${this.boss.hp} / ${this.stageManager.current.boss.hp}`);
+      this.progressText.setText(`BOSS  ${this.boss.hp} / ${this.bossMaxHp}`);
     } else {
       const pct = Math.min(100, Math.floor(this.stageTime / this.stageManager.current.duration * 100));
       this.progressText.setText(`STAGE ${this.stageManager.stageNumber}/${this.stageManager.totalStages}  ${pct}%`);
