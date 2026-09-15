@@ -1,11 +1,10 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
-import { SettingsManager, Difficulty } from '../managers/SettingsManager';
+import { SettingsManager } from '../managers/SettingsManager';
 import { SaveManager } from '../managers/SaveManager';
 import { StatusManager } from '../managers/StatusManager';
 
 type OptionItemKey =
-  | 'difficulty'
   | 'bgm'
   | 'se'
   | 'voice'
@@ -104,21 +103,6 @@ export class OptionScene extends Phaser.Scene {
 
   private setupItems(): void {
     this.items = [
-      {
-        key: 'difficulty',
-        label: '難易度設定',
-        description: 'ゲームの難易度を選択します。\n※「難」では敵や敵弾から受けるダメージが2倍になります。',
-        getValueText: () => (this.settingsManager.difficulty === 'normal' ? '普通 (Normal)' : '難 (Hard) ★'),
-        onChange: (delta) => {
-          const current = this.settingsManager.difficulty;
-          const next: Difficulty = delta > 0 ? (current === 'normal' ? 'hard' : 'normal') : (current === 'hard' ? 'normal' : 'hard');
-          this.settingsManager.setDifficulty(next);
-        },
-        onSelect: () => {
-          const next: Difficulty = this.settingsManager.difficulty === 'normal' ? 'hard' : 'normal';
-          this.settingsManager.setDifficulty(next);
-        },
-      },
       {
         key: 'bgm',
         label: 'BGM 音量',
@@ -403,7 +387,7 @@ export class OptionScene extends Phaser.Scene {
     // 説明文表示
     this.descText = this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - 62, '', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '13px',
+      fontSize: '16px',
       color: '#94a3b8',
       align: 'center',
       wordWrap: { width: 700 },

@@ -9,12 +9,17 @@ interface MenuItem {
   description: string;
 }
 
+type StartPlayMode = 'onePlayer' | 'twoPlayer';
+
 export class TitleScene extends Phaser.Scene {
   private selectedIndex = 0;
+  private startPlayMode: StartPlayMode = 'onePlayer';
   private menuItems: MenuItem[] = [];
   private menuTexts: Phaser.GameObjects.Text[] = [];
   private menuBackplates: Phaser.GameObjects.Graphics[] = [];
   private menuHitAreas: Phaser.GameObjects.Zone[] = [];
+  private startSwitchArrow?: Phaser.GameObjects.Text;
+  private startSwitchHitArea?: Phaser.GameObjects.Zone;
   private cursorIcon!: Phaser.GameObjects.Text;
   private descText!: Phaser.GameObjects.Text;
   private backgroundGrid?: Phaser.GameObjects.Graphics;
@@ -324,22 +329,39 @@ export class TitleScene extends Phaser.Scene {
     }
   }
 
+  private getStartMenuText(): string {
+    return this.startPlayMode === 'onePlayer' ? 'ゲーム開始\n1人プレイ' : 'ゲーム開始\n2人プレイ';
+  }
+
+  private getStartDescription(): string {
+    return this.startPlayMode === 'onePlayer'
+      ? '一人でステージを攻略するメインモードを開始します。'
+      : '2人で協力してステージを攻略できるモードです。';
+  }
+
+  private getMenuItemY(index: number): number {
+    const startY = 274;
+    if (index === 0) return startY;
+    return startY + 64 + (index - 1) * 42;
+  }
+
+  private getMenuButtonBounds(index: number): { x: number; width: number; height: number } {
+    if (index === 0) {
+      return { x: 122, width: 302, height: 56 };
+    }
+    return { x: 122, width: 302, height: 36 };
+  }
+
   private createMenu(): void {
+    this.startPlayMode = 'onePlayer';
+
     this.menuItems = [
       {
-        text: 'ゲーム開始 (1P)',
-        description: '一人でステージを攻略するメインモードを開始します。',
+        text: this.getStartMenuText(),
+        description: this.getStartDescription(),
         action: () => {
           this.titleBgm?.stop();
-          this.scene.start('status', { mode: 'gameStart', twoPlayer: false });
-        },
-      },
-      {
-        text: '二人プレイ (2P)',
-        description: '2人で協力してステージを攻略できるモードです。',
-        action: () => {
-          this.titleBgm?.stop();
-          this.scene.start('status', { mode: 'gameStart', twoPlayer: true });
+          this.scene.start('status', { mode: 'gameStart', twoPlayer: this.startPlayMode === 'twoPlayer' });
         },
       },
       {
@@ -354,7 +376,7 @@ export class TitleScene extends Phaser.Scene {
       },
       {
         text: 'オプション (Options)',
-        description: '難易度、音量、キー設定、クレジットなどを変更・確認します。',
+        description: '音量、キー設定、クレジットなどを変更・確認します。',
         action: () => {
           this.titleBgm?.stop();
           this.scene.start('option');
@@ -362,10 +384,9 @@ export class TitleScene extends Phaser.Scene {
       },
     ];
 
-    const startY = 245;
-    const itemHeight = 42;
+    const startY = this.getMenuItemY(0);
 
-    const selectMenuHeader = this.add.text(132, startY - 30, 'SELECT MENU', {
+    const selectMenuHeader = this.add.text(132, startY - 58, 'SELECT MENU', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '12px',
       color: '#22d3ee',
@@ -381,13 +402,14 @@ export class TitleScene extends Phaser.Scene {
     this.mainUiContainer.add(this.cursorIcon);
 
     this.menuItems.forEach((item, index) => {
-      const y = startY + index * itemHeight;
+      const y = this.getMenuItemY(index);
+      const bounds = this.getMenuButtonBounds(index);
 
       const backplate = this.add.graphics().setDepth(1);
       this.menuBackplates.push(backplate);
       this.mainUiContainer.add(backplate);
 
-      const hitArea = this.add.zone(273, y, 302, 36).setDepth(1.5).setInteractive({ useHandCursor: true });
+      const hitArea = this.add.zone(bounds.x + bounds.width / 2, y, bounds.width, bounds.height).setDepth(1.5).setInteractive({ useHandCursor: true });
       hitArea.on('pointerover', () => {
         if (this.isIntroPlaying) return;
         this.selectMenuItem(index);
@@ -402,22 +424,26 @@ export class TitleScene extends Phaser.Scene {
       });
       this.menuHitAreas.push(hitArea);
 
-      const btn = this.add.text(132, y, item.text, {
+      const btn = this.add.text(index === 0 ? bounds.x + bounds.width / 2 : 132, y, item.text, {
         fontFamily: GAME_CONFIG.FONT_FAMILY,
-        fontSize: '22px',
+        fontSize: index === 0 ? '25px' : '22px',
         color: '#e2e8f0',
         stroke: '#0f172a',
         strokeThickness: 4,
-      }).setOrigin(0, 0.5).setDepth(2);
+        align: index === 0 ? 'center' : 'left',
+        lineSpacing: index === 0 ? -2 : 0,
+      }).setOrigin(index === 0 ? 0.5 : 0, 0.5).setDepth(2);
 
       this.menuTexts.push(btn);
       this.mainUiContainer.add(btn);
     });
 
+    this.createStartSwitchArrow();
+
     // 説明文表示
     this.descText = this.add.text(270, GAME_CONFIG.HEIGHT - 62, '', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '13px',
+      fontSize: '16px',
       color: '#94a3b8',
       align: 'center',
       wordWrap: { width: 500 },
@@ -425,7 +451,7 @@ export class TitleScene extends Phaser.Scene {
     this.mainUiContainer.add(this.descText);
 
     // 操作ガイド
-    const guideText = this.add.text(270, GAME_CONFIG.HEIGHT - 22, '↑↓ / WS：選択　　ENTER / SPACE / クリック：決定', {
+    const guideText = this.add.text(270, GAME_CONFIG.HEIGHT - 22, '↑↓ / WS：選択　　←→ / AD：1P・2P切替　　ENTER / SPACE / クリック：決定', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '13px',
       color: '#64748b',
@@ -455,6 +481,22 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-S', () => {
       if (this.isIntroPlaying) return;
       this.navigate(1);
+    });
+    this.input.keyboard?.on('keydown-LEFT', () => {
+      if (this.isIntroPlaying) return;
+      this.switchStartPlayMode(-1);
+    });
+    this.input.keyboard?.on('keydown-A', () => {
+      if (this.isIntroPlaying) return;
+      this.switchStartPlayMode(-1);
+    });
+    this.input.keyboard?.on('keydown-RIGHT', () => {
+      if (this.isIntroPlaying) return;
+      this.switchStartPlayMode(1);
+    });
+    this.input.keyboard?.on('keydown-D', () => {
+      if (this.isIntroPlaying) return;
+      this.switchStartPlayMode(1);
     });
 
     this.input.keyboard?.on('keydown-ENTER', () => {
@@ -502,36 +544,123 @@ export class TitleScene extends Phaser.Scene {
     this.menuItems[this.selectedIndex].action();
   }
 
+  private createStartSwitchArrow(): void {
+    const y = this.getMenuItemY(0);
+
+    this.startSwitchArrow = this.add.text(0, y, '▶', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '42px',
+      color: '#f6d365',
+      stroke: '#0f172a',
+      strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(3);
+    this.mainUiContainer.add(this.startSwitchArrow);
+
+    this.startSwitchHitArea = this.add.zone(0, y, 54, 64)
+      .setDepth(3.5)
+      .setInteractive({ useHandCursor: true });
+    this.startSwitchHitArea.on('pointerover', () => {
+      if (this.isIntroPlaying || this.modalOpen) return;
+      this.selectMenuItem(0);
+    });
+    this.startSwitchHitArea.on('pointerdown', () => {
+      if (this.isIntroPlaying) {
+        this.skipIntroAnimation();
+        return;
+      }
+      this.selectMenuItem(0);
+      this.switchStartPlayMode(this.startPlayMode === 'onePlayer' ? 1 : -1);
+    });
+    this.mainUiContainer.add(this.startSwitchHitArea);
+
+    this.updateStartSwitchArrow();
+  }
+
+  private updateStartSwitchArrow(): void {
+    if (!this.startSwitchArrow || !this.startSwitchHitArea) return;
+
+    const y = this.getMenuItemY(0);
+    const startBounds = this.getMenuButtonBounds(0);
+    const arrowX = this.startPlayMode === 'onePlayer' ? startBounds.x + startBounds.width + 38 : startBounds.x - 30;
+    const arrowText = this.startPlayMode === 'onePlayer' ? '▶' : '◀';
+
+    this.startSwitchArrow.setText(arrowText).setPosition(arrowX, y);
+    this.startSwitchHitArea.setPosition(arrowX, y);
+  }
+
+  private switchStartPlayMode(direction: number): void {
+    if (this.isIntroPlaying || this.modalOpen || this.selectedIndex !== 0) return;
+
+    const nextMode: StartPlayMode = this.startPlayMode === 'onePlayer' ? 'twoPlayer' : 'onePlayer';
+    const slideDirection = direction >= 0 ? 1 : -1;
+    const startText = this.menuTexts[0];
+    const centerX = this.getMenuButtonBounds(0).x + this.getMenuButtonBounds(0).width / 2;
+
+    this.startPlayMode = nextMode;
+    this.menuItems[0].text = this.getStartMenuText();
+    this.menuItems[0].description = this.getStartDescription();
+    this.updateStartSwitchArrow();
+    this.descText.setText(this.menuItems[0].description);
+    this.playSound('titleSelect');
+
+    this.tweens.killTweensOf(startText);
+    this.tweens.add({
+      targets: startText,
+      x: centerX - slideDirection * 28,
+      alpha: 0,
+      duration: 90,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        startText.setText(this.getStartMenuText());
+        startText.setX(centerX + slideDirection * 28);
+        this.tweens.add({
+          targets: startText,
+          x: centerX,
+          alpha: 1,
+          duration: 140,
+          ease: 'Sine.easeOut',
+        });
+      },
+    });
+  }
+
   private playSound(key: string): void {
     this.sound.play(key, { volume: SettingsManager.getInstance().seVolume / 100 });
   }
 
   private updateSelection(): void {
-    const startY = 245;
-    const itemHeight = 42;
-    const targetY = startY + this.selectedIndex * itemHeight;
+    const targetY = this.getMenuItemY(this.selectedIndex);
 
+    this.cursorIcon.setVisible(this.selectedIndex !== 0);
     this.cursorIcon.setY(targetY);
 
     this.menuTexts.forEach((text, i) => {
+      const y = this.getMenuItemY(i);
+      const bounds = this.getMenuButtonBounds(i);
+
+      if (i === 0) {
+        text.setX(bounds.x + bounds.width / 2).setY(y);
+      }
+
       if (i === this.selectedIndex) {
-        text.setColor('#f6d365').setFontSize(24).setStyle({ fontStyle: 'bold' });
+        text.setColor('#f6d365').setFontSize(i === 0 ? 27 : 24).setStyle({ fontStyle: 'bold' });
         this.menuBackplates[i].clear();
         this.menuBackplates[i].fillStyle(0x0d4fa6, 0.9);
-        this.menuBackplates[i].fillRoundedRect(122, startY + i * itemHeight - 18, 302, 36, 8);
+        this.menuBackplates[i].fillRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
         this.menuBackplates[i].lineStyle(2, 0xfacc15, 0.9);
-        this.menuBackplates[i].strokeRoundedRect(122, startY + i * itemHeight - 18, 302, 36, 8);
+        this.menuBackplates[i].strokeRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
       } else {
-        text.setColor('#cbd5e1').setFontSize(22).setStyle({ fontStyle: 'normal' });
+        text.setColor('#cbd5e1').setFontSize(i === 0 ? 25 : 22).setStyle({ fontStyle: 'normal' });
         this.menuBackplates[i].clear();
         this.menuBackplates[i].fillStyle(0x061a4a, 0.5);
-        this.menuBackplates[i].fillRoundedRect(122, startY + i * itemHeight - 18, 302, 36, 8);
+        this.menuBackplates[i].fillRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
         this.menuBackplates[i].lineStyle(1, 0x1e55b7, 0.4);
-        this.menuBackplates[i].strokeRoundedRect(122, startY + i * itemHeight - 18, 302, 36, 8);
+        this.menuBackplates[i].strokeRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
       }
     });
 
     this.descText.setText(this.menuItems[this.selectedIndex].description);
+    this.updateStartSwitchArrow();
   }
 
   private showHowToPlayModal(): void {
@@ -549,7 +678,7 @@ export class TitleScene extends Phaser.Scene {
       '・迫り来る敵をショットで撃破しながら進みましょう。',
       '・敵や敵弾に当たるとHPが減少します（HPが0になるとゲームオーバー）。',
       '・ステージ進行度が100%になると巨大ボスが出現！ボス撃破でステージクリア！',
-      '・オプションで「難易度」や「音量」のカスタマイズが可能です。',
+      '・オプションで「音量」のカスタマイズが可能です。',
     ]);
   }
 
