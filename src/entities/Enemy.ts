@@ -11,7 +11,9 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   /** 形状ごとの移動速度倍率。サブクラスでオーバーライドする（例: 三角形を高速化）。 */
   protected speedMultiplier = 1;
   /** 見た目・当たり判定の拡大率。画像/当たり判定が小さすぎたため底上げしている。形状ごとに調整したい場合はサブクラスで上書きする。 */
-  protected spriteScale = 1.6;
+  protected spriteScale = 2.1;
+  /** ステージ側で差し替える実写画像（星形以外）は既定の生成図形よりさらにこの倍率分だけ大きく表示する。 */
+  protected customImageScaleBoost = 1.6;
   /** spawn()が呼ばれた時刻(ms)。形状ごとの時間依存の移動（波形移動など）に使う。 */
   protected spawnTime = 0;
 
@@ -71,16 +73,20 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     texture?: string,
   ): void {
     this.enableBody(true, x, y, true, true);
-    this.setTexture(texture && this.scene.textures.exists(texture) ? texture : this.defaultTexture);
+    const usingCustomTexture = !!texture && texture !== this.defaultTexture && this.scene.textures.exists(texture);
+    this.setTexture(usingCustomTexture ? (texture as string) : this.defaultTexture);
     // ステージ側で差し替える画像の解像度は統一されていないため、既定テクスチャとの縦横最大辺の比率でスケールを補正し、
-    // どの画像でも他の敵と見た目のサイズが揃うようにする。
+    // どの画像でも他の敵と見た目のサイズが揃うようにする。実写画像（customImageScaleBoost）はさらに底上げする。
     const actualMaxDim = Math.max(this.width, this.height);
     const sizeRatio = this.defaultMaxDim / actualMaxDim;
-    this.setScale(this.spriteScale * sizeRatio);
+    const boost = usingCustomTexture ? this.customImageScaleBoost : 1;
+    this.setScale(this.spriteScale * sizeRatio * boost);
     // 当たり判定はsetupHitbox()が既定テクスチャの解像度基準で設定した値のままだと、
     // 上のスケール補正と掛け合わさって極端に小さく（実質当たらなく）なってしまうため、
     // 見た目のスケール補正と逆比になるよう当たり判定側も同じ比率で補正し、結果として
     // 常に「spriteScale基準の元の当たり判定サイズ」が保たれるようにする。
+    // （setSize/setCircleは呼び出し時点のscale=spriteScale*sizeRatio*boostを当たり判定へ焼き込むため、
+    // 　ここではsizeRatio分だけ逆補正すればboostは掛け算としてそのまま当たり判定にも反映される）
     const hitboxCompensation = 1 / sizeRatio;
     const body = this.body as Phaser.Physics.Arcade.Body;
     if (this.baseHitbox.isCircle) {

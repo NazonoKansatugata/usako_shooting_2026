@@ -1118,7 +1118,7 @@ export class ShootingScene extends Phaser.Scene {
 
     switch (this.stageManager.stageNumber) {
       case 1:
-        this.boss = new Stage1Boss(this, bx, by, this.bossBallBullets, bossConfig.bulletSpeed);
+        this.boss = new Stage1Boss(this, bx, by, this.bossBallBullets, bossConfig.bulletSpeed, getPlayers, hitPlayer);
         break;
       case 2:
         this.boss = new Stage2Boss(
