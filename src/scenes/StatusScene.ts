@@ -91,6 +91,7 @@ export class StatusScene extends Phaser.Scene {
     if (this.sceneData.twoPlayer) this.createPlayerTabs();
     this.createStatRows();
     this.createDoneButton();
+    this.createTitleButton();
     this.setupInput();
 
     this.refresh(true);
@@ -371,11 +372,14 @@ export class StatusScene extends Phaser.Scene {
   }
 
   private createDoneButton(): void {
-    const btnBg = this.add.graphics().setDepth(1);
     const btnX = GAME_CONFIG.WIDTH - 100;
     const btnY = 35;
+    // Graphicsはbtnと違い原点(0,0)からの絶対座標で描画すると、setScale()が画面左上を基点に
+    // 拡縮してしまいホバー時にボックスだけ位置がズレる。position(btnX, btnY)に置いた上で
+    // ローカル原点(0,0)基準の相対座標で描画し、テキストと同じ中心を基点に拡縮させる。
+    const btnBg = this.add.graphics().setPosition(btnX, btnY).setDepth(1);
     btnBg.fillStyle(0xfde047, 1);
-    btnBg.fillRoundedRect(btnX - 65, btnY - 22, 130, 44, 10);
+    btnBg.fillRoundedRect(-65, -22, 130, 44, 10);
 
     const btn = this.add.text(btnX, btnY, '完了', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
@@ -388,11 +392,34 @@ export class StatusScene extends Phaser.Scene {
     btn.on('pointerout', () => { btn.setScale(1); btnBg.setScale(1); });
     btn.on('pointerdown', () => this.finish());
 
-    this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - 20, '↑↓：選択　←→：割り振り　ENTER / クリック：完了', {
+    this.add.text(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT - 20, '↑↓：選択　←→：割り振り　ENTER / クリック：完了　　T：タイトルへ戻る', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '12px',
       color: '#64748b',
     }).setOrigin(0.5).setDepth(2);
+  }
+
+  private createTitleButton(): void {
+    const btnX = 100;
+    const btnY = 35;
+    // 完了ボタンと同じ理由（Graphicsは絶対座標で描画するとsetScale()の基点が画面左上になる）で
+    // ホバー時にボックスがズレていたため、position(btnX, btnY)＋ローカル原点基準の相対座標に変更。
+    const btnBg = this.add.graphics().setPosition(btnX, btnY).setDepth(1);
+    btnBg.fillStyle(0x1e293b, 1);
+    btnBg.fillRoundedRect(-75, -20, 150, 40, 10);
+    btnBg.lineStyle(1.5, 0x64748b, 0.9);
+    btnBg.strokeRoundedRect(-75, -20, 150, 40, 10);
+
+    const btn = this.add.text(btnX, btnY, 'タイトルへ戻る', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '15px',
+      color: '#cbd5e1',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(2).setInteractive({ useHandCursor: true });
+
+    btn.on('pointerover', () => { btn.setColor('#fde047'); btnBg.setScale(1.06); });
+    btn.on('pointerout', () => { btn.setColor('#cbd5e1'); btnBg.setScale(1); });
+    btn.on('pointerdown', () => this.returnToTitle());
   }
 
   // ---------------------------------------------------------------------
@@ -417,6 +444,7 @@ export class StatusScene extends Phaser.Scene {
     });
     this.input.keyboard?.on('keydown-ENTER', () => this.finish());
     this.input.keyboard?.on('keydown-ESC', () => this.finish());
+    this.input.keyboard?.on('keydown-T', () => this.returnToTitle());
   }
 
   private navigateRow(delta: number): void {
@@ -535,5 +563,13 @@ export class StatusScene extends Phaser.Scene {
       this.scene.stop();
       this.scene.resume('shooting');
     }
+  }
+
+  private returnToTitle(): void {
+    this.playSound('optConfirm');
+    // stageClear経由の場合、裏で一時停止中のshootingシーンが残っているため、
+    // タイトルへ戻る際は明示的に停止して破棄する（gameStart経由ではshootingは未起動なので無害）。
+    this.scene.stop('shooting');
+    this.scene.start('title');
   }
 }
