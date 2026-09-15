@@ -36,7 +36,7 @@ export class ShootingScene extends Phaser.Scene {
   private static readonly BGM_LOOP_ADVANCE_SECONDS = 0.1;
   private static readonly GAME_OVER_TRANSITION_DELAY = 3000;
   /** 雑魚敵の移動速度（ステージJSONのspeed/vy）に一律で掛ける倍率 */
-  private static readonly SPEED_MULTIPLIER = 1.3;
+  private static readonly SPEED_MULTIPLIER = 1.5;
 
   private player!: Player;
   private bullets!: Phaser.Physics.Arcade.Group;
@@ -522,7 +522,7 @@ export class ShootingScene extends Phaser.Scene {
   /** type:'shooter'の雑魚敵が出現した瞬間に、その場からプレイヤーへの角度で1発だけ自機狙い弾を撃つ。 */
   private fireEnemyAimedShot(x: number, y: number): void {
     const angle = Phaser.Math.Angle.Between(x, y, this.player.x, this.player.y);
-    const bulletSpeed = 455;
+    const bulletSpeed = 430;
 
     let bullet = this.enemyBullets.getFirstDead(false) as Bullet;
     if (!bullet) {
