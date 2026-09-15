@@ -176,12 +176,14 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   private navigate(delta: number): void {
+    if (!this.sys.isActive()) return;
     this.selectedIndex = (this.selectedIndex + delta + this.menuItems.length) % this.menuItems.length;
     this.updateSelection();
     this.playSound('gameOverSelect');
   }
 
   private executeSelect(): void {
+    if (!this.sys.isActive()) return;
     this.playSound('gameOverConfirm');
     this.menuItems[this.selectedIndex].action();
   }
@@ -191,6 +193,8 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   private updateSelection(): void {
+    if (!this.sys.isActive()) return;
+
     const startY = 320;
     const itemHeight = 52;
     const btnW = 340;
@@ -199,9 +203,14 @@ export class GameOverScene extends Phaser.Scene {
 
     this.cursorIcon.setY(targetY);
 
+    this.menuTexts = this.menuTexts.filter((text) => !!text && text.active && text.scene === this);
+
     this.menuTexts.forEach((text, i) => {
+      if (!text || !text.active || !text.texture) return;
+
       const y = startY + i * itemHeight;
       const backplate = this.menuBackplates[i];
+      if (!backplate || !backplate.active) return;
       backplate.clear();
 
       if (i === this.selectedIndex) {
