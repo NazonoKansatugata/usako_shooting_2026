@@ -3,24 +3,217 @@
   "dialogues": [
     {
       "id": "s3_01",
-      "triggerPercent": 0,
+      "triggerType": "stageStart",
       "speaker": "うさこ",
-      "text": "うさこ「最終決戦エリアよ！気を引き締めていこう！」",
-      "duration": 4000
+      "text": "よーやく外に出られたウサ！",
+      "duration": 1500
     },
     {
       "id": "s3_02",
-      "triggerPercent": 50,
-      "speaker": "ナビ",
-      "text": "ナビ「これまでのデータを総力結集して突破してください！」",
-      "duration": 4000
+      "triggerType": "stageStart",
+      "speaker": "ねここ",
+      "text": "入った時とは随分景色が違うニャ",
+      "duration": 1500
     },
     {
       "id": "s3_03",
-      "triggerPercent": 95,
-      "speaker": "ラスボス",
-      "text": "ラスボス「よくぞここまで来た。だが我が圧倒的パワーの前に散るがよい！」",
-      "duration": 5000
+      "triggerType": "stageStart",
+      "speaker": "けろこ",
+      "text": "やっぱりタイムマシンだったケロね...",
+      "duration": 1500
+    },
+    {
+      "id": "s3_04",
+      "triggerType": "progress",
+      "triggerPercent": 0,
+      "speaker": "うさこ",
+      "text": "これからどうするウサ？",
+      "duration": 1500
+    },
+    {
+      "id": "s3_05",
+      "triggerType": "progress",
+      "triggerPercent": 0,
+      "speaker": "ねここ",
+      "text": "ゲームなんだから進んでればご都合展開で帰れるニャ！",
+      "duration": 1500
+    },
+    {
+      "id": "s3_06",
+      "triggerType": "progress",
+      "triggerPercent": 0,
+      "speaker": "けろこ",
+      "text": "あまりにもメタいケロ...",
+      "duration": 1500
+    },
+    {
+      "id": "s3_early_01",
+      "triggerType": "event",
+      "triggerPercent": 15,
+      "speaker": "ねここ",
+      "text": "こいつらはなんで街中で暴れまわってるのニャ?",
+      "duration": 1500
+    },
+    {
+      "id": "s3_early_02",
+      "triggerType": "event",
+      "triggerPercent": 15,
+      "speaker": "うさこ",
+      "text": "溢れ出る身内ノリで新参者を寄せ付けなくなった",
+      "duration": 1500
+    },
+    {
+      "id": "s3_early_03",
+      "triggerType": "event",
+      "triggerPercent": 15,
+      "speaker": "うさこ",
+      "text": "じょぎ部員の成れの果てかもしれないウサね...",
+      "duration": 1500
+    },
+    {
+      "id": "s3_early_04",
+      "triggerType": "event",
+      "triggerPercent": 15,
+      "speaker": "ねここ",
+      "text": "そんな...成れ果てる前から化け物だったニャんて...",
+      "duration": 1500
+    },
+    {
+      "id": "s3_early_05",
+      "triggerType": "event",
+      "triggerPercent": 15,
+      "speaker": "けろこ",
+      "text": "まぁ、オープニングで地球滅亡してる時点で設定なんて期待しないほうが良いケロ",
+      "duration": 1500
+    },
+    {
+      "id": "s3_early_06",
+      "triggerType": "event",
+      "triggerPercent": 15,
+      "speaker": "うさこ",
+      "text": "けろこが言うと説得力があるウサね...",
+      "duration": 1500
+    },
+    {
+      "id": "s3_mid_01",
+      "triggerType": "progress",
+      "eventId": "s3_mid",
+      "triggerPercent": 50,
+      "speaker": "うさこ",
+      "text": "いいこと考えたウサ！",
+      "duration": 1500
+    },
+    {
+      "id": "s3_mid_02",
+      "triggerType": "progress",
+      "eventId": "s3_mid",
+      "triggerPercent": 50,
+      "speaker": "ねここ",
+      "text": "どうしたケロ？",
+      "duration": 1500
+    },
+    {
+      "id": "s3_mid_03",
+      "triggerType": "progress",
+      "eventId": "s3_mid",
+      "triggerPercent": 50,
+      "speaker": "うさこ",
+      "text": "こんな低クオリティの作品作っといて「20年越しのリメイク」とかほざいてるゲーム制作者を成敗するウサ！",
+      "duration": 1500
+    },
+    {
+      "id": "s3_mid_04",
+      "triggerType": "progress",
+      "eventId": "s3_mid",
+      "triggerPercent": 50,
+      "speaker": "ねここ",
+      "text": "確かにニャ！このまま強制的にラスボス戦にしてしまえば、ねここ達も帰れるし一石二百鳥ニャ！",
+      "duration": 1500
+    },
+    {
+      "id": "s3_mid_05",
+      "triggerType": "progress",
+      "eventId": "s3_mid",
+      "triggerPercent": 50,
+      "speaker": "うさこ",
+      "text": "そうと決まれば急ぐウサー！",
+      "duration": 1500
+    },
+     {
+      "id": "s3_mid_06",
+      "triggerType": "progress",
+      "eventId": "s3_mid",
+      "triggerPercent": 50,
+      "speaker": "けろこ",
+      "text": "(これどんな気持ちで脚本書いてるケロ...?)",
+      "duration": 1500
+    },
+    {
+      "id": "s3_late_01",
+      "triggerType": "progress",
+      "triggerPercent": 75,
+      "speaker": "ねここ",
+      "text": "もうすぐニャ！",
+      "duration": 1500
+    },
+    {
+      "id": "s3_late_02",
+      "triggerType": "progress",
+      "triggerPercent": 75,
+      "speaker": "けろこ",
+      "text": "目的からして、これは部室に向かってるってことケロね",
+      "duration": 1500
+    },
+    {
+      "id": "s3_late_03",
+      "triggerType": "progress",
+      "triggerPercent": 75,
+      "speaker": "うさこ",
+      "text": "つまり現在は九〇大前駅か新〇中央駅あたりウサ",
+      "duration": 1500
+    },
+    {
+      "id": "s3_late_04",
+      "triggerType": "progress",
+      "triggerPercent": 75,
+      "speaker": "ねここ",
+      "text": "妙にリアルな距離感だニャ",
+      "duration": 1500
+    },
+    {
+      "id": "s3_bosspre_01",
+      "triggerType": "bossDefeat",
+      "speaker": "うさこ",
+      "text": "うさこ達の勝利ウサ―！！",
+      "duration": 1500
+    },
+    {
+      "id": "s3_bosspre_02",
+      "triggerType": "bossDefeat",
+      "speaker": "けろこ",
+      "text": "帰りのタイムマシンもしっかりあるケロね",
+      "duration": 1500
+    },
+    {
+      "id": "s3_bosspre_03",
+      "triggerType": "bossDefeat",
+      "speaker": "ねここ",
+      "text": "これで帰れるニャ！",
+      "duration": 1500
+    },
+    {
+      "id": "s3_bosspre_04",
+      "triggerType": "bossDefeat",
+      "speaker": "うさこ",
+      "text": "リメイクを名乗るくらいなら、新規の素材ぐらい揃えてから挑むウサ！",
+      "duration": 1500
+    },
+    {
+      "id": "s3_bosspre_05",
+      "triggerType": "bossDefeat",
+      "speaker": "くろこ",
+      "text": "ぐ...3日間のハッカソンで終わる分量じゃなかった...",
+      "duration": 1500
     }
   ]
 }
