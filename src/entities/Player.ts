@@ -16,12 +16,14 @@ interface PlayerTextureSet {
   baseOffsetY: number;
   /** wing画像の表示位置のズレ補正(px、正の値で上にずらす)。 */
   wingOffsetY: number;
+  /** wing画像の重ね順。本体(depth 1)より前に出すか後ろに出すか（画像ごとに構図が違うため個別に指定する）。 */
+  wingDepth: number;
 }
 
 /** 2人プレイ時、P1(うさこ色)とP2(ねここ色)で別々のテクスチャ・アニメーションキーを使う。 */
 const PLAYER_TEXTURES: Record<PlayerVariant, PlayerTextureSet> = {
-  p1: { base: 'player-base', wing1: 'player-wing-1', wing3: 'player-wing-3', hit: 'player-hit', flightAnim: 'player-flight', baseOffsetX: 0, baseOffsetY: 0, wingOffsetY: 0 },
-  p2: { base: 'player2-base', wing1: 'player2-wing-1', wing3: 'player2-wing-3', hit: 'player2-hit', flightAnim: 'player2-flight', baseOffsetX: 5, baseOffsetY: 0, wingOffsetY: 20 },
+  p1: { base: 'player-base', wing1: 'player-wing-1', wing3: 'player-wing-3', hit: 'player-hit', flightAnim: 'player-flight', baseOffsetX: 0, baseOffsetY: 0, wingOffsetY: 0, wingDepth: 2 },
+  p2: { base: 'player2-base', wing1: 'player2-wing-1', wing3: 'player2-wing-3', hit: 'player2-hit', flightAnim: 'player2-flight', baseOffsetX: 5, baseOffsetY: 0, wingOffsetY: 20, wingDepth: 0 },
 };
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
@@ -47,7 +49,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setScale(Player.SCALE);
-    // 羽(wing)を最背面、本体(this)・砲・被弾演出をその手前に描画する重ね順。
     this.setDepth(1);
 
     if (textures.baseOffsetX !== 0 || textures.baseOffsetY !== 0) {
@@ -60,7 +61,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.wingOffsetY = textures.wingOffsetY;
-    this.wingSprite = scene.add.sprite(x, y - 2 * Player.SCALE - this.wingOffsetY, textures.wing1).setScale(Player.SCALE).setDepth(0);
+    this.wingSprite = scene.add.sprite(x, y - 2 * Player.SCALE - this.wingOffsetY, textures.wing1).setScale(Player.SCALE).setDepth(textures.wingDepth);
     this.wingSprite.play(textures.flightAnim);
     this.airCannon = scene.add.sprite(x + 15 * Player.SCALE, y + 4 * Player.SCALE, 'player-air-cannon').setScale(Player.SCALE).setDepth(2);
     this.hitSprite = scene.add.sprite(x, y, textures.hit).setDepth(2);
