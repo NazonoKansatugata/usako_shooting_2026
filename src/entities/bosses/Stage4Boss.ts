@@ -1,29 +1,59 @@
 import Phaser from 'phaser';
-import { Boss } from './Boss';
-import { Bullet } from '../Bullet';
 import { GAME_CONFIG } from '../../config';
+import { Boss } from './Boss';
+import { Hazard } from './Hazard';
+
+type HitPlayerFn = (object1: any, object2: any) => void;
+type InstaKillPlayerFn = (player: Phaser.Physics.Arcade.Sprite) => void;
 
 /**
- * 高難易度限定のボーナスステージ（ステージ4）用ボス。
- * 本体（画面右端）と分身1体（画面左端）が、それぞれ縦に往復移動しながら
- * 同時に自機狙いの扇状弾幕を放つ。被弾判定を持つのは本体のみで、
- * 分身は見た目上の攻撃源（自弾は素通りする）。
+ * 高難易度限定のボーナスステージ（ステージ4）用ボス。画面右側に単体で出現する。
+ * HP50%以上：通常攻撃として、横一直線ビーム＋自機のX座標を狙う縦ビームを同時に発射する
+ * （横だけだと安全地帯を見つけやすく簡単すぎるため、縦も組み合わせて十字に交差させる）。
+ * 横ビームのY座標はステージ2と同様「発射時点のボス自身のY座標」、縦ビームのX座標は
+ * 「発射時点の自機のX座標」を使う。どちらも乱数ではなく実際の座標をそのまま使うため、
+ * 同じ動き・同じ操作をすれば同じ結果になる再現性のあるパターンになる。
+ *
+ * HP50%未満：通常攻撃をやめ、必殺技フェーズに入る。ステージ上の4箇所を固定の順番で巡回する
+ * 「安置」を警告表示し、発生時に安置の外にいるプレイヤーは無敵時間等を無視して即ゲームオーバーになる
+ * （乱数を使うと運ゲーになるため、安置の位置は固定パターンで巡回させ再現性を持たせている）。
  */
 export class Stage4Boss extends Boss {
   static readonly TEXTURE_KEY = 'boss4';
 
-  private static readonly FAN_BULLET_COUNT = 5;
-  private static readonly FAN_SPREAD_DEG = 80;
-  /** 上下往復移動の速度 */
-  private static readonly PATROL_SPEED = 80;
-  /**
-   * 分身の初期Y座標を本体からずらす量。自機の初期出現位置（画面左端付近）と
-   * 分身（画面左端）がほぼ同じ座標になり開幕即被弾してしまうのを避けるための調整。
-   */
-  private static readonly CLONE_Y_START_OFFSET = -150;
+  private static readonly PATROL_SPEED = 130;
 
-  private fanTimer = 0;
-  private cloneLeft!: Phaser.Physics.Arcade.Sprite;
+  private static readonly BEAM_HP_THRESHOLD = 0.5;
+  private static readonly BEAM_INTERVAL = 1700;
+  private static readonly BEAM_WARNING_MS = 700;
+  private static readonly BEAM_ACTIVE_MS = 320;
+  private static readonly BEAM_HEIGHT = 70;
+  private static readonly BEAM_Y_MARGIN = 60;
+  private static readonly VERTICAL_BEAM_WIDTH = 150;
+
+  // 必殺技（安置以外即死）の固定巡回位置。プレイエリア(960x420)を4分割した各中心。
+  private static readonly SAFE_ZONE_CENTERS: { x: number; y: number }[] = [
+    { x: 240, y: 105 },
+    { x: 720, y: 105 },
+    { x: 720, y: 315 },
+    { x: 240, y: 315 },
+  ];
+  private static readonly SAFE_ZONE_WIDTH = 220;
+  private static readonly SAFE_ZONE_HEIGHT = 150;
+  private static readonly ULTIMATE_INTERVAL = 3200;
+  private static readonly ULTIMATE_WARNING_MS = 1400;
+  private static readonly ULTIMATE_ACTIVE_MS = 500;
+
+  private beamTimer = 0;
+  private beamHazards: Hazard[] = [];
+  private beamInProgress = false;
+
+  private ultimatePhase = false;
+  private ultimateState: 'idle' | 'warning' | 'active' = 'idle';
+  private ultimateTimer = 0;
+  private safeZoneIndex = 0;
+  private dangerOverlay?: Phaser.GameObjects.Rectangle;
+  private safeZoneVisual?: Phaser.GameObjects.Rectangle;
 
   static ensureTexture(scene: Phaser.Scene): void {
     if (scene.textures.exists(Stage4Boss.TEXTURE_KEY)) return;
@@ -39,69 +69,174 @@ export class Stage4Boss extends Boss {
     x: number,
     y: number,
     private readonly getPlayers: () => Phaser.Physics.Arcade.Sprite[],
-    private readonly enemyBulletsPool: Phaser.Physics.Arcade.Group,
-    private readonly bulletInterval: number,
-    private readonly bulletSpeed: number,
+    private readonly hitPlayer: HitPlayerFn,
+    private readonly instaKillPlayer: InstaKillPlayerFn,
   ) {
     Stage4Boss.ensureTexture(scene);
     super(scene, x, y, Stage4Boss.TEXTURE_KEY);
-
-    // 本体は呼び出し側が渡す画面右端寄りの座標。分身はそれを画面中央で反転した左端寄りの座標に置く。
-    // Yは自機の初期出現位置と重ならないよう上方向にずらす（往復移動でいずれ全域をカバーする）。
-    const cloneX = GAME_CONFIG.PLAY_AREA.WIDTH - x;
-    const cloneY = Phaser.Math.Clamp(
-      y + Stage4Boss.CLONE_Y_START_OFFSET, 40, GAME_CONFIG.PLAY_AREA.HEIGHT - 40,
-    );
-    this.cloneLeft = scene.physics.add.sprite(cloneX, cloneY, Stage4Boss.TEXTURE_KEY);
-    this.cloneLeft.setCollideWorldBounds(true);
-    this.cloneLeft.setBounce(1);
-  }
-
-  /** 本体撃破後に一緒に片付ける分身。プレイヤーとの当たり判定は呼び出し側で登録する。 */
-  public get clones(): Phaser.Physics.Arcade.Sprite[] {
-    return [this.cloneLeft];
   }
 
   protected onSpawn(): void {
-    this.fanTimer = 0;
+    this.beamTimer = 0;
+    this.beamHazards = [];
+    this.beamInProgress = false;
+    this.ultimatePhase = false;
+    this.ultimateState = 'idle';
+    this.ultimateTimer = 0;
+    this.safeZoneIndex = 0;
     this.setVelocityY(Stage4Boss.PATROL_SPEED);
-    this.cloneLeft.enableBody(true, this.cloneLeft.x, this.cloneLeft.y, true, true);
-    this.cloneLeft.setVelocityY(-Stage4Boss.PATROL_SPEED);
   }
 
   protected updateBehavior(_time: number, delta: number): void {
-    this.fanTimer += delta;
-    if (this.fanTimer >= this.bulletInterval) {
-      this.fanTimer = 0;
-      this.fireFanFrom(this.x, this.y);
-      if (this.cloneLeft.active) this.fireFanFrom(this.cloneLeft.x, this.cloneLeft.y);
-    }
-  }
-
-  private fireFanFrom(sx: number, sy: number): void {
-    const target = this.nearestPlayer(this.getPlayers());
-    const baseAngle = Phaser.Math.Angle.Between(sx, sy, target.x, target.y);
-    const count = Stage4Boss.FAN_BULLET_COUNT;
-    const stepDeg = Stage4Boss.FAN_SPREAD_DEG / (count - 1);
-    for (let i = 0; i < count; i++) {
-      const offsetDeg = -Stage4Boss.FAN_SPREAD_DEG / 2 + stepDeg * i;
-      const angle = baseAngle + Phaser.Math.DegToRad(offsetDeg);
-
-      let bullet = this.enemyBulletsPool.getFirstDead(false) as Bullet;
-      if (!bullet) {
-        bullet = new Bullet(this.scene, sx, sy, 'enemyBullet');
-        this.enemyBulletsPool.add(bullet);
+    if (!this.ultimatePhase && this.hpRatio <= Stage4Boss.BEAM_HP_THRESHOLD) {
+      this.ultimatePhase = true;
+      this.ultimateTimer = 0;
+      // 通常攻撃（十字ビーム）は必殺技フェーズに入ったら止め、進行中のものは強制終了する
+      this.beamHazards.forEach((h) => h.forceEnd());
+      this.beamHazards = [];
+      if (this.beamInProgress) {
+        this.beamInProgress = false;
+        this.resumeVerticalMovement();
       }
-      bullet.fire(sx, sy, Math.cos(angle) * this.bulletSpeed, Math.sin(angle) * this.bulletSpeed);
+    }
+
+    if (!this.ultimatePhase) {
+      this.beamTimer += delta;
+      if (this.beamTimer >= Stage4Boss.BEAM_INTERVAL) {
+        this.beamTimer = 0;
+        this.fireBeam();
+      }
+      if (this.beamHazards.length > 0) {
+        this.beamHazards = this.beamHazards.filter((h) => !h.isDone);
+        if (this.beamInProgress && this.beamHazards.length === 0) {
+          this.beamInProgress = false;
+          this.resumeVerticalMovement();
+        }
+      }
+    } else {
+      this.updateUltimate(delta);
     }
   }
 
-  /**
-   * 本体撃破時・シーン破棄時に分身も片付ける。Hazardの過去の不具合と同様、
-   * シーン破棄時は個別に追加したGameObject同士の破棄順序が保証されないため、
-   * .activeを確認してから.bodyに触れるガードを入れる。
-   */
+  /** ビーム発射中に動くと警告位置とビームの座標がずれるため、警告〜発生の間は移動を止める */
+  private fireBeam(): void {
+    this.pauseVerticalMovement();
+    this.beamInProgress = true;
+
+    const players = this.getPlayers();
+    const target = this.nearestPlayer(players);
+
+    // 横一直線ビームのy座標は、自機や乱数ではなくボス自身の（決定的に動く）y座標に合わせる
+    const y = Phaser.Math.Clamp(this.y, Stage4Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage4Boss.BEAM_Y_MARGIN);
+    const horizontalHazard = new Hazard(
+      this.scene,
+      { kind: 'rect', width: GAME_CONFIG.PLAY_AREA.WIDTH, height: Stage4Boss.BEAM_HEIGHT },
+      players,
+      this.hitPlayer,
+    );
+    horizontalHazard.trigger(GAME_CONFIG.PLAY_AREA.WIDTH / 2, y, Stage4Boss.BEAM_WARNING_MS, Stage4Boss.BEAM_ACTIVE_MS);
+    this.beamHazards.push(horizontalHazard);
+
+    // 横だけだと安全地帯を見つけやすく簡単すぎるため、発射時点の自機のx座標に縦ビームも同時に出す
+    const x = Phaser.Math.Clamp(
+      target.x, Stage4Boss.VERTICAL_BEAM_WIDTH / 2, GAME_CONFIG.PLAY_AREA.WIDTH - Stage4Boss.VERTICAL_BEAM_WIDTH / 2,
+    );
+    const verticalHazard = new Hazard(
+      this.scene,
+      { kind: 'rect', width: Stage4Boss.VERTICAL_BEAM_WIDTH, height: GAME_CONFIG.PLAY_AREA.HEIGHT },
+      players,
+      this.hitPlayer,
+    );
+    verticalHazard.trigger(x, GAME_CONFIG.PLAY_AREA.HEIGHT / 2, Stage4Boss.BEAM_WARNING_MS, Stage4Boss.BEAM_ACTIVE_MS);
+    this.beamHazards.push(verticalHazard);
+  }
+
+  private updateUltimate(delta: number): void {
+    this.ultimateTimer += delta;
+    switch (this.ultimateState) {
+      case 'idle':
+        if (this.ultimateTimer >= Stage4Boss.ULTIMATE_INTERVAL) {
+          this.ultimateTimer = 0;
+          this.beginUltimateWarning();
+        }
+        break;
+      case 'warning':
+        if (this.ultimateTimer >= Stage4Boss.ULTIMATE_WARNING_MS) {
+          this.ultimateTimer = 0;
+          this.activateUltimate();
+        }
+        break;
+      case 'active':
+        this.checkUltimateHits();
+        if (this.ultimateTimer >= Stage4Boss.ULTIMATE_ACTIVE_MS) {
+          this.ultimateTimer = 0;
+          this.endUltimate();
+        }
+        break;
+    }
+  }
+
+  private ensureUltimateVisuals(): void {
+    if (!this.dangerOverlay) {
+      this.dangerOverlay = this.scene.add
+        .rectangle(
+          GAME_CONFIG.PLAY_AREA.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2,
+          GAME_CONFIG.PLAY_AREA.WIDTH, GAME_CONFIG.PLAY_AREA.HEIGHT, 0xff0000, 0.35,
+        )
+        .setDepth(4)
+        .setVisible(false);
+    }
+    if (!this.safeZoneVisual) {
+      this.safeZoneVisual = this.scene.add
+        .rectangle(0, 0, Stage4Boss.SAFE_ZONE_WIDTH, Stage4Boss.SAFE_ZONE_HEIGHT, 0x39ff14, 0.55)
+        .setStrokeStyle(3, 0x39ff14, 1)
+        .setDepth(5)
+        .setVisible(false);
+    }
+  }
+
+  /** 必殺技：安置（固定パターンで巡回）を警告表示する。警告〜発生の間は移動を止める */
+  private beginUltimateWarning(): void {
+    this.ensureUltimateVisuals();
+    this.pauseVerticalMovement();
+    this.ultimateState = 'warning';
+
+    const center = Stage4Boss.SAFE_ZONE_CENTERS[this.safeZoneIndex];
+    this.dangerOverlay!.setFillStyle(0xff0000, 0.3).setVisible(true);
+    this.safeZoneVisual!.setPosition(center.x, center.y).setVisible(true);
+  }
+
+  private activateUltimate(): void {
+    this.ultimateState = 'active';
+    this.dangerOverlay!.setFillStyle(0xff0000, 0.8);
+  }
+
+  /** 安置の外にいるプレイヤーを無敵時間等を無視して即ゲームオーバーにする */
+  private checkUltimateHits(): void {
+    const center = Stage4Boss.SAFE_ZONE_CENTERS[this.safeZoneIndex];
+    const halfW = Stage4Boss.SAFE_ZONE_WIDTH / 2;
+    const halfH = Stage4Boss.SAFE_ZONE_HEIGHT / 2;
+    for (const player of this.getPlayers()) {
+      const inSafeZone =
+        Math.abs(player.x - center.x) <= halfW && Math.abs(player.y - center.y) <= halfH;
+      if (!inSafeZone) this.instaKillPlayer(player);
+    }
+  }
+
+  private endUltimate(): void {
+    this.ultimateState = 'idle';
+    this.dangerOverlay?.setVisible(false);
+    this.safeZoneVisual?.setVisible(false);
+    this.resumeVerticalMovement();
+    this.safeZoneIndex = (this.safeZoneIndex + 1) % Stage4Boss.SAFE_ZONE_CENTERS.length;
+  }
+
   protected override onDestroyHazards(): void {
-    if (this.cloneLeft?.active) this.cloneLeft.disableBody(true, true);
+    this.beamHazards.forEach((h) => h.forceEnd());
+    this.beamHazards = [];
+    if (this.dangerOverlay?.active) this.dangerOverlay.destroy();
+    if (this.safeZoneVisual?.active) this.safeZoneVisual.destroy();
+    this.dangerOverlay = undefined;
+    this.safeZoneVisual = undefined;
   }
 }
