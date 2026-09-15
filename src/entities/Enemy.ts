@@ -23,15 +23,31 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   public pendingShot = false;
   private hp = 1;
   private readonly defaultTexture: string;
+  /** 既定（生成テクスチャ）の縦横最大辺。ステージ側で差し替えるカスタム画像の解像度がまちまちなため、
+   *  これを基準に敵ごとの見た目サイズを正規化する（例: 極端に高解像度な画像が他の敵より大きく見えるのを防ぐ）。 */
+  private readonly defaultMaxDim: number;
+  /** setupHitbox()が既定テクスチャに対して設定した当たり判定の基準値（後でカスタム画像の解像度差を補正するために保持する）。 */
+  private baseHitbox!: { isCircle: boolean; radius: number; width: number; height: number; offsetX: number; offsetY: number };
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
     super(scene, x, y, texture);
     this.defaultTexture = texture;
+    this.defaultMaxDim = Math.max(this.width, this.height);
     scene.add.existing(this);
     scene.physics.add.existing(this);
     // setSize/setCircleは呼び出し時点のスケールを当たり判定に反映するため、setupHitbox()より先にscaleを適用する
     this.setScale(this.spriteScale);
     this.setupHitbox();
+
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    this.baseHitbox = {
+      isCircle: body.isCircle,
+      radius: body.radius,
+      width: body.sourceWidth,
+      height: body.sourceHeight,
+      offsetX: body.offset.x,
+      offsetY: body.offset.y,
+    };
   }
 
   /** 見た目の形状に合わせた当たり判定を設定する（各サブクラスで実装） */
@@ -56,6 +72,28 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   ): void {
     this.enableBody(true, x, y, true, true);
     this.setTexture(texture && this.scene.textures.exists(texture) ? texture : this.defaultTexture);
+    // ステージ側で差し替える画像の解像度は統一されていないため、既定テクスチャとの縦横最大辺の比率でスケールを補正し、
+    // どの画像でも他の敵と見た目のサイズが揃うようにする。
+    const actualMaxDim = Math.max(this.width, this.height);
+    const sizeRatio = this.defaultMaxDim / actualMaxDim;
+    this.setScale(this.spriteScale * sizeRatio);
+    // 当たり判定はsetupHitbox()が既定テクスチャの解像度基準で設定した値のままだと、
+    // 上のスケール補正と掛け合わさって極端に小さく（実質当たらなく）なってしまうため、
+    // 見た目のスケール補正と逆比になるよう当たり判定側も同じ比率で補正し、結果として
+    // 常に「spriteScale基準の元の当たり判定サイズ」が保たれるようにする。
+    const hitboxCompensation = 1 / sizeRatio;
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    if (this.baseHitbox.isCircle) {
+      body.setCircle(
+        this.baseHitbox.radius * hitboxCompensation,
+        this.baseHitbox.offsetX * hitboxCompensation,
+        this.baseHitbox.offsetY * hitboxCompensation,
+      );
+    } else {
+      body
+        .setSize(this.baseHitbox.width * hitboxCompensation, this.baseHitbox.height * hitboxCompensation)
+        .setOffset(this.baseHitbox.offsetX * hitboxCompensation, this.baseHitbox.offsetY * hitboxCompensation);
+    }
     this.setVelocity(speedX * this.speedMultiplier, speedY * this.speedMultiplier);
     this.crossX = crossX;
     this.spawnTime = this.scene.time.now;
