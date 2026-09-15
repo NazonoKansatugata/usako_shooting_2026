@@ -2,30 +2,79 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config';
 import { SettingsManager } from '../managers/SettingsManager';
 
+export type PlayerVariant = 'p1' | 'p2';
+
+interface PlayerTextureSet {
+  base: string;
+  wing1: string;
+  wing3: string;
+  hit: string;
+  flightAnim: string;
+  /** base画像の見た目上のズレ補正(px、正の値で左にずらす)。画像ごとに余白が違うため個別に調整する。 */
+  baseOffsetX: number;
+  /** base画像の見た目上のズレ補正(px、正の値で上にずらす)。 */
+  baseOffsetY: number;
+  /** wing画像の表示位置のズレ補正(px、正の値で上にずらす)。 */
+  wingOffsetY: number;
+}
+
+/** 2人プレイ時、P1(うさこ色)とP2(ねここ色)で別々のテクスチャ・アニメーションキーを使う。 */
+const PLAYER_TEXTURES: Record<PlayerVariant, PlayerTextureSet> = {
+  p1: { base: 'player-base', wing1: 'player-wing-1', wing3: 'player-wing-3', hit: 'player-hit', flightAnim: 'player-flight', baseOffsetX: 0, baseOffsetY: 0, wingOffsetY: 0 },
+  p2: { base: 'player2-base', wing1: 'player2-wing-1', wing3: 'player2-wing-3', hit: 'player2-hit', flightAnim: 'player2-flight', baseOffsetX: 5, baseOffsetY: 0, wingOffsetY: 20 },
+};
+
 export class Player extends Phaser.Physics.Arcade.Sprite {
   /** プレイヤー画像全体（本体・羽・砲）の拡大率 */
   private static readonly SCALE = 1.4;
   private static readonly HIT_IMAGE_OFFSET_X = 0;
   private static readonly HIT_IMAGE_OFFSET_Y = -30;
+  private static readonly LABEL_OFFSET_Y = -28;
 
   private _isInvulnerable = false;
   private _hp: number = GAME_CONFIG.PLAYER_HP;
   private readonly wingSprite: Phaser.GameObjects.Sprite;
   private readonly airCannon: Phaser.GameObjects.Sprite;
   private readonly hitSprite: Phaser.GameObjects.Sprite;
+  private readonly labelText?: Phaser.GameObjects.Text;
+  private readonly wingOffsetY: number;
   private isDying = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, 'player-base');
+  /** label（例:"1P"/"2P"）を渡すと、機体の少し上に追従する識別ラベルを表示する（2人プレイでの見分け用）。 */
+  constructor(scene: Phaser.Scene, x: number, y: number, variant: PlayerVariant = 'p1', label?: string) {
+    const textures = PLAYER_TEXTURES[variant];
+    super(scene, x, y, textures.base);
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setScale(Player.SCALE);
+    // 羽(wing)を最背面、本体(this)・砲・被弾演出をその手前に描画する重ね順。
+    this.setDepth(1);
 
-    this.wingSprite = scene.add.sprite(x, y - 2 * Player.SCALE, 'player-wing-1').setScale(Player.SCALE);
-    this.wingSprite.play('player-flight');
-    this.airCannon = scene.add.sprite(x + 15 * Player.SCALE, y + 4 * Player.SCALE, 'player-air-cannon').setScale(Player.SCALE);
-    this.hitSprite = scene.add.sprite(x, y, 'player-hit');
+    if (textures.baseOffsetX !== 0 || textures.baseOffsetY !== 0) {
+      // originを動かすと見た目と物理ボディ（当たり判定）が連動してズレる（this.x/this.yは変わらない）ため、
+      // キャラごとの画像余白差を吸収する見た目調整にはsetSize/setOffsetではなくこちらを使う。
+      this.setOrigin(
+        0.5 + textures.baseOffsetX / (Player.SCALE * this.width),
+        0.5 + textures.baseOffsetY / (Player.SCALE * this.height),
+      );
+    }
+
+    this.wingOffsetY = textures.wingOffsetY;
+    this.wingSprite = scene.add.sprite(x, y - 2 * Player.SCALE - this.wingOffsetY, textures.wing1).setScale(Player.SCALE).setDepth(0);
+    this.wingSprite.play(textures.flightAnim);
+    this.airCannon = scene.add.sprite(x + 15 * Player.SCALE, y + 4 * Player.SCALE, 'player-air-cannon').setScale(Player.SCALE).setDepth(2);
+    this.hitSprite = scene.add.sprite(x, y, textures.hit).setDepth(2);
     this.hitSprite.setVisible(false);
+
+    if (label) {
+      this.labelText = scene.add.text(x, y + Player.LABEL_OFFSET_Y, label, {
+        fontFamily: GAME_CONFIG.FONT_FAMILY,
+        fontSize: '14px',
+        color: variant === 'p2' ? '#f6a3d3' : '#f6d365',
+        stroke: '#12263a',
+        strokeThickness: 4,
+      }).setOrigin(0.5).setDepth(3);
+    }
 
     this.setCollideWorldBounds(true);
     // player-base画像(31x43px)のシルエットに大まかに合わせた長方形（幅20px×高さ30px、オフセット6, 8）
@@ -35,7 +84,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   public preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
-    this.wingSprite.setPosition(this.x, this.y - 3 * Player.SCALE);
+    this.wingSprite.setPosition(this.x, this.y - 3 * Player.SCALE - this.wingOffsetY);
     this.wingSprite.setRotation(this.rotation);
     this.wingSprite.setAlpha(this.alpha);
     this.wingSprite.setVisible(this.visible);
@@ -43,12 +92,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.airCannon.setRotation(this.rotation);
     this.airCannon.setAlpha(this.alpha);
     this.airCannon.setVisible(this.visible);
+    this.labelText?.setPosition(this.x, this.y + Player.LABEL_OFFSET_Y);
   }
 
   public destroy(fromScene?: boolean): void {
     this.wingSprite.destroy(fromScene);
     this.airCannon.destroy(fromScene);
     this.hitSprite.destroy(fromScene);
+    this.labelText?.destroy(fromScene);
     super.destroy(fromScene);
   }
 
@@ -69,14 +120,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setVisible(true);
     (this.body as Phaser.Physics.Arcade.Body).enable = true;
     this.hitSprite.setVisible(false);
+    this.labelText?.setVisible(true);
   }
 
-  public move(cursors: Phaser.Types.Input.Keyboard.CursorKeys, keys: Record<string, Phaser.Input.Keyboard.Key>): void {
+  public move(left: boolean, right: boolean, up: boolean, down: boolean): void {
     if (!this.active || this.isDying) return;
-    const left = cursors.left.isDown || keys.A.isDown;
-    const right = cursors.right.isDown || keys.D.isDown;
-    const up = cursors.up.isDown || keys.W.isDown;
-    const down = cursors.down.isDown || keys.S.isDown;
 
     const vx = (right ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED - (left ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED;
     const vy = (down ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED - (up ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED;
@@ -91,6 +139,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setVisible(false);
     this.wingSprite.setVisible(false);
     this.airCannon.setVisible(false);
+    this.labelText?.setVisible(false);
     this.hitSprite.setPosition(
       this.x + Player.HIT_IMAGE_OFFSET_X,
       this.y + Player.HIT_IMAGE_OFFSET_Y,

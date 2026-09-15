@@ -59,6 +59,13 @@ export abstract class Boss extends Phaser.Physics.Arcade.Sprite {
   /** 各ボス固有の移動・攻撃ロジック */
   protected abstract updateBehavior(time: number, delta: number): void;
 
+  /** 生存中のプレイヤーの中から自身に最も近い1体を返す（2人プレイでの狙い撃ち用）。1件ならそのまま返す。 */
+  protected nearestPlayer(players: Phaser.Physics.Arcade.Sprite[]): Phaser.Physics.Arcade.Sprite {
+    return players.reduce((a, b) =>
+      Phaser.Math.Distance.Between(this.x, this.y, a.x, a.y) <= Phaser.Math.Distance.Between(this.x, this.y, b.x, b.y) ? a : b,
+    );
+  }
+
   override destroy(fromScene?: boolean): void {
     this.onDestroyHazards();
     super.destroy(fromScene);

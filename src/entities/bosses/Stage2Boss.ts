@@ -39,7 +39,7 @@ export class Stage2Boss extends Boss {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    private readonly player: Phaser.Physics.Arcade.Sprite,
+    private readonly getPlayers: () => Phaser.Physics.Arcade.Sprite[],
     private readonly hitPlayer: HitPlayerFn,
     private readonly enemyBulletsPool: Phaser.Physics.Arcade.Group,
     private readonly fanInterval: number,
@@ -86,7 +86,8 @@ export class Stage2Boss extends Boss {
   }
 
   private fireFanBarrage(): void {
-    const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, this.player.x, this.player.y);
+    const target = this.nearestPlayer(this.getPlayers());
+    const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
     const count = Stage2Boss.FAN_BULLET_COUNT;
     const stepDeg = Stage2Boss.FAN_SPREAD_DEG / (count - 1);
     for (let i = 0; i < count; i++) {
@@ -107,11 +108,13 @@ export class Stage2Boss extends Boss {
     this.pauseVerticalMovement();
     this.beamInProgress = true;
 
-    const y = Phaser.Math.Clamp(this.player.y, Stage2Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage2Boss.BEAM_Y_MARGIN);
+    const players = this.getPlayers();
+    const target = this.nearestPlayer(players);
+    const y = Phaser.Math.Clamp(target.y, Stage2Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage2Boss.BEAM_Y_MARGIN);
     const hazard = new Hazard(
       this.scene,
       { kind: 'rect', width: GAME_CONFIG.PLAY_AREA.WIDTH, height: Stage2Boss.BEAM_HEIGHT },
-      this.player,
+      players,
       this.hitPlayer,
     );
     hazard.trigger(GAME_CONFIG.PLAY_AREA.WIDTH / 2, y, Stage2Boss.BEAM_WARNING_MS, Stage2Boss.BEAM_ACTIVE_MS);
