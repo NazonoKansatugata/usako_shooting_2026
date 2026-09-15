@@ -23,7 +23,17 @@ export class SquareEnemy extends Enemy {
   }
 
   /** 斜め移動はせず、常に水平方向の直進のみ行う（ステージJSON側のvy/crossX指定は無視する）。 */
-  public override spawn(x: number, y: number, speedX = -120, _speedY = 0, _crossX?: number, canShoot = false, shootDelay = 0): void {
-    super.spawn(x, y, speedX, 0, undefined, canShoot, shootDelay);
+  public override spawn(
+    x: number,
+    y: number,
+    speedX = -120,
+    _speedY = 0,
+    _crossX?: number,
+    canShoot = false,
+    shootDelay = 0,
+    hp = 1,
+    texture?: string,
+  ): void {
+    super.spawn(x, y, speedX, 0, undefined, canShoot, shootDelay, hp, texture);
   }
 }
