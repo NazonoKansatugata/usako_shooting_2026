@@ -770,16 +770,6 @@ export class ShootingScene extends Phaser.Scene {
     this.player2?.move(this.cursors.left.isDown, this.cursors.right.isDown, this.cursors.up.isDown, this.cursors.down.isDown);
   }
 
-  /** 中心角度(rad)を中心に、count本の弾をangleStep(rad)間隔の扇形に均等展開した角度配列を返す。 */
-  private static fanAngles(centerAngle: number, count: number, angleStep: number): number[] {
-    const angles: number[] = [];
-    const offsetStart = -((count - 1) / 2) * angleStep;
-    for (let i = 0; i < count; i++) {
-      angles.push(centerAngle + offsetStart + i * angleStep);
-    }
-    return angles;
-  }
-
   private firePlayerBullet(player: Player, isDown: boolean, slot: 1 | 2): void {
     if (!player.active || !isDown) return;
     const timer = slot === 1 ? this.fireTimer1 : this.fireTimer2;
@@ -787,31 +777,19 @@ export class ShootingScene extends Phaser.Scene {
     if (slot === 1) this.fireTimer1 = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
     else this.fireTimer2 = GAME_CONFIG.PLAYER_FIRE_INTERVAL;
 
+    // WEP: 弾数を増やさず、レベルごとに自弾の貫通数を+1する（弾幕を煩雑にせず火力を上げる）。
     const status = this.statusManager.getData(player.variant);
-    const angleStep = Phaser.Math.DegToRad(GAME_CONFIG.FAN_ANGLE_STEP_DEG);
-    const speed = GAME_CONFIG.PLAYER_BULLET_SPEED;
-
-    // WEP: 前方弾。1発が基本形で、WEPレベルごとに1発追加され、複数になると扇形に広がる。
-    const forwardCount = 1 + status.wep;
-    for (const angle of ShootingScene.fanAngles(0, forwardCount, angleStep)) {
-      this.firePlayerBulletAt(player.x + 20, player.y, Math.cos(angle) * speed, Math.sin(angle) * speed);
-    }
-
-    // DEX: 後方弾。レベル0では発射せず、レベルごとに1発ずつ増え、複数になると扇形に広がる。
-    if (status.dex > 0) {
-      for (const angle of ShootingScene.fanAngles(Math.PI, status.dex, angleStep)) {
-        this.firePlayerBulletAt(player.x - 20, player.y, Math.cos(angle) * speed, Math.sin(angle) * speed);
-      }
-    }
+    const pierce = status.wep * GAME_CONFIG.WEP_PIERCE_PER_LEVEL;
+    this.firePlayerBulletAt(player.x + 20, player.y, GAME_CONFIG.PLAYER_BULLET_SPEED, 0, pierce);
   }
 
-  private firePlayerBulletAt(x: number, y: number, vx: number, vy: number): void {
+  private firePlayerBulletAt(x: number, y: number, vx: number, vy: number, pierce = 0): void {
     let bullet = this.bullets.getFirstDead(false) as Bullet;
     if (!bullet) {
       bullet = new Bullet(this, x, y, 'bullet');
       this.bullets.add(bullet);
     }
-    bullet.fire(x, y, vx, vy);
+    bullet.fire(x, y, vx, vy, pierce);
   }
 
   private updateEnemies(): void {
@@ -1009,15 +987,23 @@ export class ShootingScene extends Phaser.Scene {
 
   private hitEnemy(object1: any, object2: any): void {
     // overlap(this.bullets, group, ...)で登録しているため、常にobject1=弾, object2=敵
-    const bullet = object1;
+    const bullet: Bullet = object1;
     const enemy = object2;
     if (!bullet || !enemy || !bullet.active || !enemy.active) return;
-    bullet.disableBody(true, true);
+    // 貫通弾（WEP強化）が同じ敵に何度も反応しないようにする
+    if (!bullet.registerHit(enemy)) return;
+
     if (enemy.takeDamage()) {
       enemy.disableBody(true, true);
       this.sound.play('se_enemy_defeat', { volume: this.seVolume(0.45) });
       this.score += ShootingScene.SCORE_ENEMY_DEFEAT;
       this.updateHud();
+    }
+
+    if (bullet.pierceRemaining > 0) {
+      bullet.pierceRemaining -= 1;
+    } else {
+      bullet.disableBody(true, true);
     }
   }
 
@@ -1029,9 +1015,15 @@ export class ShootingScene extends Phaser.Scene {
     // ゲームオーバー画面が出ないままフリーズしたように見えるバグになるため、ここで確実に弾く。
     if (this.mode !== 'playing') return;
     if (this.bossDefeated) return;
-    const bullet = (object1 === this.boss) ? object2 : object1;
+    const bullet: Bullet = (object1 === this.boss) ? object2 : object1;
     if (!bullet || !bullet.active || !this.boss || !this.boss.active) return;
-    bullet.disableBody(true, true);
+    // 貫通弾（WEP強化）がボスの当たり判定内に留まっている間、同一フレーム連続で多重ヒットしないようにする
+    if (!bullet.registerHit(this.boss)) return;
+    if (bullet.pierceRemaining > 0) {
+      bullet.pierceRemaining -= 1;
+    } else {
+      bullet.disableBody(true, true);
+    }
     const defeated = this.boss.takeDamage(1);
     if (defeated) {
       this.bossDefeated = true;

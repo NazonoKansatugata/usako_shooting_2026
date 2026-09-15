@@ -18,10 +18,10 @@ interface StatRow {
 }
 
 const STAT_ROWS: StatRow[] = [
-  { key: 'wep', label: 'WEP', color: 0xff8a3d, description: 'WEP：前方弾が1発増える。複数になると扇状に広がって発射される。' },
+  { key: 'wep', label: 'WEP', color: 0xff8a3d, description: 'WEP：自弾が敵を貫通できるようになる。Lvが上がるほど貫通できる数が増え、並んだ敵をまとめて撃ち抜ける。' },
   { key: 'str', label: 'STR', color: 0xff5d7a, description: 'STR：自機の移動速度が上がる。避けにも攻めにも使える基礎ステータス。' },
   { key: 'def', label: 'DEF', color: 0x4dd0e1, description: 'DEF：自機の最大HPが増える。ステージ開始・クリア時に全回復する。' },
-  { key: 'dex', label: 'DEX', color: 0x9d7bff, description: 'DEX：後方弾が1発増える。複数になると扇状に広がって発射される。' },
+  { key: 'dex', label: 'DEX', color: 0x9d7bff, description: 'DEX：被弾した際の無敵時間が伸びる。連続被弾からの生存率が上がる。' },
 ];
 
 const MAX_LEVEL = STATUS_MAX_LEVEL;
