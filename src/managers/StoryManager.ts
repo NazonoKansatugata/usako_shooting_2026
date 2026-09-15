@@ -23,7 +23,12 @@ interface EventGroup {
 }
 
 /** イベント系ダイアログを開始順に1本ずつ連続再生する */
-function playSequence(dialogueWindow: DialogueWindow, items: DialogueItem[], onComplete?: () => void): void {
+function playSequence(
+  dialogueWindow: DialogueWindow,
+  items: DialogueItem[],
+  onComplete?: () => void,
+  onItemStart?: (item: DialogueItem) => void,
+): void {
   if (items.length === 0) {
     onComplete?.();
     return;
@@ -36,6 +41,7 @@ function playSequence(dialogueWindow: DialogueWindow, items: DialogueItem[], onC
     }
     const item = items[index];
     index += 1;
+    onItemStart?.(item);
     dialogueWindow.showDialogue(item, showNext);
   };
   showNext();
@@ -187,12 +193,21 @@ export class StoryManager {
   }
 
   /** ボス撃破直後に呼び出す。ダイアログ再生完了後にonCompleteを呼ぶ */
-  public triggerBossDefeatEvent(onComplete: () => void): void {
+  public triggerBossDefeatEvent(onComplete: () => void, onItemStart?: (item: DialogueItem) => void): void {
     if (this.bossDefeatDialogues.length === 0) {
       onComplete();
       return;
     }
-    playSequence(this.dialogueWindow, this.bossDefeatDialogues, onComplete);
+    this.blocking = true;
+    playSequence(
+      this.dialogueWindow,
+      this.bossDefeatDialogues,
+      () => {
+        this.blocking = false;
+        onComplete();
+      },
+      onItemStart,
+    );
   }
 
   /** ステージクリア画面表示時に呼び出す */
