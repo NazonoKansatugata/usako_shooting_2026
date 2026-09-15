@@ -3,17 +3,220 @@
   "dialogues": [
     {
       "id": "s2_01",
-      "triggerPercent": 0,
+      "triggerType": "stageStart",
       "speaker": "うさこ",
-      "text": "うさこ「第2エリアに到達。高速型の敵機に注意して！」",
-      "duration": 4000
+      "text": "なんだこの空間！？",
+      "duration": 1500
     },
     {
       "id": "s2_02",
-      "triggerPercent": 60,
-      "speaker": "ナビ",
-      "text": "ナビ「前方より大型熱源反応をキャッチ！間もなく接敵します！」",
-      "duration": 4000
+      "triggerType": "stageStart",
+      "speaker": "ねここ",
+      "text": "へんなのいっぱい浮いてるニャ！？",
+      "duration": 1500
+    },
+    {
+      "id": "s2_03",
+      "triggerType": "stageStart",
+      "speaker": "けろこ",
+      "text": "二人とも気を付けるケロ！",
+      "duration": 1500
+    },
+    {
+      "id": "s2_04",
+      "triggerType": "progress",
+      "triggerPercent": 0,
+      "speaker": "ねここ",
+      "text": "...というか、けろこはなんで落ち着いてるニャ？",
+      "duration": 1500
+    },
+    {
+      "id": "s2_05",
+      "triggerType": "progress",
+      "triggerPercent": 0,
+      "speaker": "けろこ",
+      "text": "家でくつろぎながら指示出してるからケロ",
+      "duration": 1500
+    },
+    {
+      "id": "s2_06",
+      "triggerType": "progress",
+      "triggerPercent": 0,
+      "speaker": "ねここ",
+      "text": "あ！こいつズルいニャ！",
+      "duration": 1500
+    },
+    {
+      "id": "s2_07",
+      "triggerType": "progress",
+      "triggerPercent": 0,
+      "speaker": "うさこ",
+      "text": "薄情者ウサねぇ..",
+      "duration": 1500
+    },
+    {
+      "id": "s2_early_01",
+      "triggerType": "event",
+      "triggerPercent": 15,
+      "speaker": "ねここ",
+      "text": "さっきからニャんだこのカニ!?!?",
+      "duration": 1500
+    },
+    {
+      "id": "s2_early_02",
+      "triggerType": "event",
+      "triggerPercent": 15,
+      "speaker": "うさこ",
+      "text": "すっげぇキモいデザインうさ！",
+      "duration": 1500
+    },
+    {
+      "id": "s2_early_03",
+      "triggerType": "event",
+      "triggerPercent": 15,
+      "speaker": "けろこ",
+      "text": "極めて何か生命に対する冒涜を感じるケロ...",
+      "duration": 1500
+    },
+    {
+      "id": "s2_early_04",
+      "triggerType": "event",
+      "triggerPercent": 15,
+      "speaker": "ち〇かに",
+      "text": "ヒドい..",
+      "duration": 1500
+    },
+    {
+      "id": "s2_mid_01",
+      "triggerType": "progress",
+      "eventId": "s2_mid",
+      "triggerPercent": 50,
+      "speaker": "うさこ",
+      "text": "さっきからあのキモいカニしかいないウサ...",
+      "duration": 1500
+    },
+    {
+      "id": "s2_mid_02",
+      "triggerType": "progress",
+      "eventId": "s2_mid",
+      "triggerPercent": 50,
+      "speaker": "ねここ",
+      "text": "実質キモカニ空間じゃないかニャ？",
+      "duration": 1500
+    },
+    {
+      "id": "s2_mid_03",
+      "triggerType": "progress",
+      "eventId": "s2_mid",
+      "triggerPercent": 50,
+      "speaker": "けろこ",
+      "text": "いろんなネタを詰め込みたかったけど、時間が足りなかったっぽいケロ？",
+      "duration": 1500
+    },
+    {
+      "id": "s2_mid_04",
+      "triggerType": "progress",
+      "eventId": "s2_mid",
+      "triggerPercent": 50,
+      "speaker": "うさこ",
+      "text": "大人の事情ウサねぇ...",
+      "duration": 1500
+    },
+    {
+      "id": "s2_mid_05",
+      "triggerType": "progress",
+      "eventId": "s2_mid",
+      "triggerPercent": 50,
+      "speaker": "ねここ",
+      "text": "世知辛いニャ",
+      "duration": 1500
+    },
+    {
+      "id": "s2_late_01",
+      "triggerType": "progress",
+      "triggerPercent": 75,
+      "speaker": "けろこ",
+      "text": "そろそろ空間を抜けるケロ！",
+      "duration": 1500
+    },
+    {
+      "id": "s2_late_02",
+      "triggerType": "progress",
+      "triggerPercent": 75,
+      "speaker": "ねここ",
+      "text": "ボス戦注意ニャ",
+      "duration": 1500
+    },
+    {
+      "id": "s2_late_03",
+      "triggerType": "progress",
+      "triggerPercent": 75,
+      "speaker": "うさこ",
+      "text": "カニ以外で頼むうさ..",
+      "duration": 1500
+    },
+    {
+      "id": "s2_bosspre_01",
+      "triggerType": "bossDefeat",
+      "speaker": "うさこ",
+      "text": "カニは嫌とは言ったけど、まさかQRコードとは思わなかったウサ...",
+      "duration": 1500
+    },
+    {
+      "id": "s2_bosspre_02",
+      "triggerType": "bossDefeat",
+      "speaker": "ねここ",
+      "text": "文字通り、読めない敵だったニャ",
+      "duration": 1500
+    },
+    {
+      "id": "s2_bosspre_03",
+      "triggerType": "bossDefeat",
+      "speaker": "うさこ",
+      "text": "結局あれは何のコードだったウサ？",
+      "duration": 1500
+    },
+    {
+      "id": "s2_bosspre_04",
+      "triggerType": "bossDefeat",
+      "speaker": "けろこ",
+      "text": "どうやらあれは、じょぎのHPにつながってるっぽいケロ",
+      "duration": 1500
+    },
+    {
+      "id": "s2_bosspre_05",
+      "triggerType": "bossDefeat",
+      "speaker": "ねここ",
+      "text": "めっちゃステマだったニャ！？",
+      "duration": 1500
+    },
+    {
+      "id": "s2_bosspre_06",
+      "triggerType": "bossDefeat",
+      "speaker": "うさこ",
+      "text": "...そういえば、みらいのじょぎってどうなってるウサ？",
+      "duration": 1500
+    },
+    {
+      "id": "s2_bosspre_07",
+      "triggerType": "bossDefeat",
+      "speaker": "演出",
+      "text": "QRコードが光る",
+      "duration": 1500
+    },
+    {
+      "id": "s2_bosspre_08",
+      "triggerType": "bossDefeat",
+      "speaker": "ねここ",
+      "text": "出口ニャ！",
+      "duration": 1500
+    },
+    {
+      "id": "s2_bosspre_09",
+      "triggerType": "bossDefeat",
+      "speaker": "うさこ",
+      "text": "また吸い込まれるウサー！",
+      "duration": 1500
     }
   ]
 }
