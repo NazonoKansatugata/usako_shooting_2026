@@ -19,9 +19,12 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   private shootTimer = 0;
   /** trueになったらShootingScene側が発射処理を行い、falseに戻す。 */
   public pendingShot = false;
+  private hp = 1;
+  private readonly defaultTexture: string;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
     super(scene, x, y, texture);
+    this.defaultTexture = texture;
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setupHitbox();
@@ -36,8 +39,19 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
    * canShoot・shootDelayを指定すると、画面内に入ってからshootDelay(ms)後に
    * pendingShotがtrueになる（1体につき1回だけ）。
    */
-  public spawn(x: number, y: number, speedX = -120, speedY = 0, crossX?: number, canShoot = false, shootDelay = 0): void {
+  public spawn(
+    x: number,
+    y: number,
+    speedX = -120,
+    speedY = 0,
+    crossX?: number,
+    canShoot = false,
+    shootDelay = 0,
+    hp = 1,
+    texture?: string,
+  ): void {
     this.enableBody(true, x, y, true, true);
+    this.setTexture(texture && this.scene.textures.exists(texture) ? texture : this.defaultTexture);
     this.setVelocity(speedX * this.speedMultiplier, speedY * this.speedMultiplier);
     this.crossX = crossX;
     this.spawnTime = this.scene.time.now;
@@ -49,6 +63,13 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.hasEnteredScreen = false;
     this.shootTimer = 0;
     this.pendingShot = false;
+    this.hp = hp;
+  }
+
+  /** ダメージを与え、撃破された場合にtrueを返す。 */
+  public takeDamage(amount = 1): boolean {
+    this.hp -= amount;
+    return this.hp <= 0;
   }
 
   override preUpdate(time: number, delta: number): void {

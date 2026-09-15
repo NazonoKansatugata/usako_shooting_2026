@@ -19,6 +19,7 @@ export interface SpawnEvent {
   crossX?: number; // このX座標を通過した瞬間にvyを0にして水平移動へ切り替える
   texture?: string; // レガシー項目（現在は未使用。shapeで見た目のクラスを選ぶ）
   shape?: EnemyShape; // 敵の形状。省略時は'triangle'
+  hp?: number; // 省略時は敵タイプごとの既定値
 }
 
 export interface StageData {
@@ -27,6 +28,8 @@ export interface StageData {
   duration: number;
   spawnEvents: SpawnEvent[];
   boss: BossConfig;
+  /** 敵タイプごとの画像パス。未指定の敵は図形テクスチャで表示する。 */
+  enemyImages?: Partial<Record<EnemyShape, string>>;
 }
 
 // JSONモジュールは形の異なるspawnEvents（旧: vy/crossX/texture持ち、新: shape持ち）が混在すると
@@ -57,6 +60,11 @@ export class StageManager {
 
   public get isFinalStage(): boolean {
     return this.index >= STAGES.length - 1;
+  }
+
+  /** 指定された敵画像をすべて列挙する。重複は除外してロードに使う。 */
+  public static getEnemyImagePaths(): string[] {
+    return [...new Set(STAGES.flatMap((stage) => Object.values(stage.enemyImages ?? {})))];
   }
 
   /** 次のステージへ進む。進めた場合はtrue、最終ステージなら何もせずfalseを返す。 */
