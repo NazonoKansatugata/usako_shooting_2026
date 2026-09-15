@@ -64,41 +64,41 @@
       "shape": "triangle"
     },
     {
-      "time": 2630,
+      "time": 3620,
       "type": "shooter",
       "y": 40,
       "speed": 150,
-      "from": "right",
+      "from": "left",
       "vy": 100,
       "crossX": 480,
       "shape": "triangle"
     },
     {
-      "time": 2630,
+      "time": 3620,
       "type": "shooter",
       "y": 380,
       "speed": 150,
-      "from": "right",
+      "from": "left",
       "vy": -100,
       "crossX": 480,
       "shape": "triangle"
     },
     {
-      "time": 2840,
+      "time": 3830,
       "type": "shooter",
       "y": 40,
       "speed": 150,
-      "from": "right",
+      "from": "left",
       "vy": 100,
       "crossX": 480,
       "shape": "triangle"
     },
     {
-      "time": 2840,
+      "time": 3830,
       "type": "shooter",
       "y": 380,
       "speed": 150,
-      "from": "right",
+      "from": "left",
       "vy": -100,
       "crossX": 480,
       "shape": "triangle"
@@ -124,87 +124,7 @@
       "shape": "triangle"
     },
     {
-      "time": 4250,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 4250,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 4460,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 4460,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 4670,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 4670,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 4880,
-      "type": "shooter",
-      "y": 40,
-      "speed": 150,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 4880,
-      "type": "shooter",
-      "y": 380,
-      "speed": 150,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 6080,
+      "time": 5240,
       "type": "shooter",
       "y": 210,
       "speed": 150,
@@ -212,7 +132,7 @@
       "shape": "circle"
     },
     {
-      "time": 6530,
+      "time": 5690,
       "type": "shooter",
       "y": 210,
       "speed": 150,
@@ -220,7 +140,7 @@
       "shape": "circle"
     },
     {
-      "time": 6980,
+      "time": 6140,
       "type": "shooter",
       "y": 210,
       "speed": 150,
@@ -228,7 +148,7 @@
       "shape": "circle"
     },
     {
-      "time": 7430,
+      "time": 6590,
       "type": "shooter",
       "y": 210,
       "speed": 150,
@@ -236,7 +156,7 @@
       "shape": "circle"
     },
     {
-      "time": 8830,
+      "time": 7990,
       "type": "shooter",
       "y": 210,
       "speed": 150,
@@ -244,7 +164,7 @@
       "shape": "circle"
     },
     {
-      "time": 9280,
+      "time": 8440,
       "type": "shooter",
       "y": 210,
       "speed": 150,
@@ -252,7 +172,7 @@
       "shape": "circle"
     },
     {
-      "time": 9730,
+      "time": 8890,
       "type": "shooter",
       "y": 210,
       "speed": 150,
@@ -260,7 +180,7 @@
       "shape": "circle"
     },
     {
-      "time": 10180,
+      "time": 9340,
       "type": "shooter",
       "y": 210,
       "speed": 150,
@@ -268,7 +188,7 @@
       "shape": "circle"
     },
     {
-      "time": 11680,
+      "time": 10840,
       "type": "shooter",
       "y": 40,
       "speed": 165,
@@ -278,7 +198,7 @@
       "shape": "triangle"
     },
     {
-      "time": 11680,
+      "time": 10840,
       "type": "shooter",
       "y": 380,
       "speed": 165,
@@ -288,7 +208,7 @@
       "shape": "triangle"
     },
     {
-      "time": 11870,
+      "time": 11030,
       "type": "shooter",
       "y": 40,
       "speed": 165,
@@ -298,7 +218,7 @@
       "shape": "triangle"
     },
     {
-      "time": 11870,
+      "time": 11030,
       "type": "shooter",
       "y": 380,
       "speed": 165,
@@ -308,7 +228,7 @@
       "shape": "triangle"
     },
     {
-      "time": 12060,
+      "time": 11220,
       "type": "shooter",
       "y": 40,
       "speed": 165,
@@ -318,7 +238,7 @@
       "shape": "triangle"
     },
     {
-      "time": 12060,
+      "time": 11220,
       "type": "shooter",
       "y": 380,
       "speed": 165,
@@ -328,47 +248,7 @@
       "shape": "triangle"
     },
     {
-      "time": 12250,
-      "type": "shooter",
-      "y": 40,
-      "speed": 165,
-      "from": "right",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 12250,
-      "type": "shooter",
-      "y": 380,
-      "speed": 165,
-      "from": "right",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 12440,
-      "type": "shooter",
-      "y": 40,
-      "speed": 165,
-      "from": "right",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 12440,
-      "type": "shooter",
-      "y": 380,
-      "speed": 165,
-      "from": "right",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 13640,
+      "time": 12420,
       "type": "shooter",
       "y": 40,
       "speed": 165,
@@ -378,7 +258,7 @@
       "shape": "triangle"
     },
     {
-      "time": 13640,
+      "time": 12420,
       "type": "shooter",
       "y": 380,
       "speed": 165,
@@ -388,7 +268,7 @@
       "shape": "triangle"
     },
     {
-      "time": 13830,
+      "time": 12610,
       "type": "shooter",
       "y": 40,
       "speed": 165,
@@ -398,7 +278,7 @@
       "shape": "triangle"
     },
     {
-      "time": 13830,
+      "time": 12610,
       "type": "shooter",
       "y": 380,
       "speed": 165,
@@ -408,7 +288,7 @@
       "shape": "triangle"
     },
     {
-      "time": 14020,
+      "time": 12800,
       "type": "shooter",
       "y": 40,
       "speed": 165,
@@ -418,7 +298,7 @@
       "shape": "triangle"
     },
     {
-      "time": 14020,
+      "time": 12800,
       "type": "shooter",
       "y": 380,
       "speed": 165,
@@ -428,47 +308,23 @@
       "shape": "triangle"
     },
     {
-      "time": 14210,
+      "time": 14000,
       "type": "shooter",
-      "y": 40,
+      "y": 210,
       "speed": 165,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 14210,
-      "type": "shooter",
-      "y": 380,
-      "speed": 165,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
+      "from": "right",
+      "shape": "circle"
     },
     {
       "time": 14400,
       "type": "shooter",
-      "y": 40,
+      "y": 210,
       "speed": 165,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
+      "from": "right",
+      "shape": "circle"
     },
     {
-      "time": 14400,
-      "type": "shooter",
-      "y": 380,
-      "speed": 165,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 15600,
+      "time": 14800,
       "type": "shooter",
       "y": 210,
       "speed": 165,
@@ -476,7 +332,7 @@
       "shape": "circle"
     },
     {
-      "time": 16000,
+      "time": 15200,
       "type": "shooter",
       "y": 210,
       "speed": 165,
@@ -484,23 +340,7 @@
       "shape": "circle"
     },
     {
-      "time": 16400,
-      "type": "shooter",
-      "y": 210,
-      "speed": 165,
-      "from": "right",
-      "shape": "circle"
-    },
-    {
-      "time": 16800,
-      "type": "shooter",
-      "y": 210,
-      "speed": 165,
-      "from": "right",
-      "shape": "circle"
-    },
-    {
-      "time": 18200,
+      "time": 16600,
       "type": "shooter",
       "y": 210,
       "speed": 165,
@@ -508,7 +348,7 @@
       "shape": "circle"
     },
     {
-      "time": 18600,
+      "time": 17000,
       "type": "shooter",
       "y": 210,
       "speed": 165,
@@ -516,7 +356,7 @@
       "shape": "circle"
     },
     {
-      "time": 19000,
+      "time": 17400,
       "type": "shooter",
       "y": 210,
       "speed": 165,
@@ -524,7 +364,7 @@
       "shape": "circle"
     },
     {
-      "time": 19400,
+      "time": 17800,
       "type": "shooter",
       "y": 210,
       "speed": 165,
@@ -532,7 +372,7 @@
       "shape": "circle"
     },
     {
-      "time": 20900,
+      "time": 19300,
       "type": "shooter",
       "y": 40,
       "speed": 180,
@@ -542,7 +382,7 @@
       "shape": "triangle"
     },
     {
-      "time": 20900,
+      "time": 19300,
       "type": "shooter",
       "y": 380,
       "speed": 180,
@@ -552,7 +392,7 @@
       "shape": "triangle"
     },
     {
-      "time": 21070,
+      "time": 19470,
       "type": "shooter",
       "y": 40,
       "speed": 180,
@@ -562,7 +402,7 @@
       "shape": "triangle"
     },
     {
-      "time": 21070,
+      "time": 19470,
       "type": "shooter",
       "y": 380,
       "speed": 180,
@@ -572,7 +412,7 @@
       "shape": "triangle"
     },
     {
-      "time": 21240,
+      "time": 19640,
       "type": "shooter",
       "y": 40,
       "speed": 180,
@@ -582,7 +422,7 @@
       "shape": "triangle"
     },
     {
-      "time": 21240,
+      "time": 19640,
       "type": "shooter",
       "y": 380,
       "speed": 180,
@@ -592,47 +432,7 @@
       "shape": "triangle"
     },
     {
-      "time": 21410,
-      "type": "shooter",
-      "y": 40,
-      "speed": 180,
-      "from": "right",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 21410,
-      "type": "shooter",
-      "y": 380,
-      "speed": 180,
-      "from": "right",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 21580,
-      "type": "shooter",
-      "y": 40,
-      "speed": 180,
-      "from": "right",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 21580,
-      "type": "shooter",
-      "y": 380,
-      "speed": 180,
-      "from": "right",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 22780,
+      "time": 20840,
       "type": "shooter",
       "y": 40,
       "speed": 180,
@@ -642,7 +442,7 @@
       "shape": "triangle"
     },
     {
-      "time": 22780,
+      "time": 20840,
       "type": "shooter",
       "y": 380,
       "speed": 180,
@@ -652,7 +452,7 @@
       "shape": "triangle"
     },
     {
-      "time": 22950,
+      "time": 21010,
       "type": "shooter",
       "y": 40,
       "speed": 180,
@@ -662,7 +462,7 @@
       "shape": "triangle"
     },
     {
-      "time": 22950,
+      "time": 21010,
       "type": "shooter",
       "y": 380,
       "speed": 180,
@@ -672,7 +472,7 @@
       "shape": "triangle"
     },
     {
-      "time": 23120,
+      "time": 21180,
       "type": "shooter",
       "y": 40,
       "speed": 180,
@@ -682,7 +482,7 @@
       "shape": "triangle"
     },
     {
-      "time": 23120,
+      "time": 21180,
       "type": "shooter",
       "y": 380,
       "speed": 180,
@@ -692,79 +492,39 @@
       "shape": "triangle"
     },
     {
-      "time": 23290,
+      "time": 22380,
       "type": "shooter",
-      "y": 40,
+      "y": 210,
       "speed": 180,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
+      "from": "right",
+      "shape": "circle"
     },
     {
-      "time": 23290,
+      "time": 22740,
       "type": "shooter",
-      "y": 380,
+      "y": 210,
       "speed": 180,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
+      "from": "right",
+      "shape": "circle"
+    },
+    {
+      "time": 23100,
+      "type": "shooter",
+      "y": 210,
+      "speed": 180,
+      "from": "right",
+      "shape": "circle"
     },
     {
       "time": 23460,
       "type": "shooter",
-      "y": 40,
-      "speed": 180,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 23460,
-      "type": "shooter",
-      "y": 380,
-      "speed": 180,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 24660,
-      "type": "shooter",
       "y": 210,
       "speed": 180,
       "from": "right",
       "shape": "circle"
     },
     {
-      "time": 25020,
-      "type": "shooter",
-      "y": 210,
-      "speed": 180,
-      "from": "right",
-      "shape": "circle"
-    },
-    {
-      "time": 25380,
-      "type": "shooter",
-      "y": 210,
-      "speed": 180,
-      "from": "right",
-      "shape": "circle"
-    },
-    {
-      "time": 25740,
-      "type": "shooter",
-      "y": 210,
-      "speed": 180,
-      "from": "right",
-      "shape": "circle"
-    },
-    {
-      "time": 27140,
+      "time": 24860,
       "type": "shooter",
       "y": 210,
       "speed": 180,
@@ -772,7 +532,7 @@
       "shape": "circle"
     },
     {
-      "time": 27500,
+      "time": 25220,
       "type": "shooter",
       "y": 210,
       "speed": 180,
@@ -780,7 +540,7 @@
       "shape": "circle"
     },
     {
-      "time": 27860,
+      "time": 25580,
       "type": "shooter",
       "y": 210,
       "speed": 180,
@@ -788,7 +548,7 @@
       "shape": "circle"
     },
     {
-      "time": 28220,
+      "time": 25940,
       "type": "shooter",
       "y": 210,
       "speed": 180,
@@ -796,7 +556,7 @@
       "shape": "circle"
     },
     {
-      "time": 29720,
+      "time": 27440,
       "type": "shooter",
       "y": 40,
       "speed": 195,
@@ -806,7 +566,7 @@
       "shape": "triangle"
     },
     {
-      "time": 29720,
+      "time": 27440,
       "type": "shooter",
       "y": 380,
       "speed": 195,
@@ -816,7 +576,7 @@
       "shape": "triangle"
     },
     {
-      "time": 29870,
+      "time": 27590,
       "type": "shooter",
       "y": 40,
       "speed": 195,
@@ -826,7 +586,7 @@
       "shape": "triangle"
     },
     {
-      "time": 29870,
+      "time": 27590,
       "type": "shooter",
       "y": 380,
       "speed": 195,
@@ -836,7 +596,7 @@
       "shape": "triangle"
     },
     {
-      "time": 30020,
+      "time": 27740,
       "type": "shooter",
       "y": 40,
       "speed": 195,
@@ -846,7 +606,7 @@
       "shape": "triangle"
     },
     {
-      "time": 30020,
+      "time": 27740,
       "type": "shooter",
       "y": 380,
       "speed": 195,
@@ -856,47 +616,7 @@
       "shape": "triangle"
     },
     {
-      "time": 30170,
-      "type": "shooter",
-      "y": 40,
-      "speed": 195,
-      "from": "right",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 30170,
-      "type": "shooter",
-      "y": 380,
-      "speed": 195,
-      "from": "right",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 30320,
-      "type": "shooter",
-      "y": 40,
-      "speed": 195,
-      "from": "right",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 30320,
-      "type": "shooter",
-      "y": 380,
-      "speed": 195,
-      "from": "right",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 31520,
+      "time": 28940,
       "type": "shooter",
       "y": 40,
       "speed": 195,
@@ -906,7 +626,7 @@
       "shape": "triangle"
     },
     {
-      "time": 31520,
+      "time": 28940,
       "type": "shooter",
       "y": 380,
       "speed": 195,
@@ -916,7 +636,7 @@
       "shape": "triangle"
     },
     {
-      "time": 31670,
+      "time": 29090,
       "type": "shooter",
       "y": 40,
       "speed": 195,
@@ -926,7 +646,7 @@
       "shape": "triangle"
     },
     {
-      "time": 31670,
+      "time": 29090,
       "type": "shooter",
       "y": 380,
       "speed": 195,
@@ -936,7 +656,7 @@
       "shape": "triangle"
     },
     {
-      "time": 31820,
+      "time": 29240,
       "type": "shooter",
       "y": 40,
       "speed": 195,
@@ -946,7 +666,7 @@
       "shape": "triangle"
     },
     {
-      "time": 31820,
+      "time": 29240,
       "type": "shooter",
       "y": 380,
       "speed": 195,
@@ -956,47 +676,7 @@
       "shape": "triangle"
     },
     {
-      "time": 31970,
-      "type": "shooter",
-      "y": 40,
-      "speed": 195,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 31970,
-      "type": "shooter",
-      "y": 380,
-      "speed": 195,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 32120,
-      "type": "shooter",
-      "y": 40,
-      "speed": 195,
-      "from": "left",
-      "vy": 100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 32120,
-      "type": "shooter",
-      "y": 380,
-      "speed": 195,
-      "from": "left",
-      "vy": -100,
-      "crossX": 480,
-      "shape": "triangle"
-    },
-    {
-      "time": 33320,
+      "time": 30440,
       "type": "shooter",
       "y": 210,
       "speed": 200,
@@ -1004,7 +684,7 @@
       "shape": "circle"
     },
     {
-      "time": 33640,
+      "time": 30760,
       "type": "shooter",
       "y": 210,
       "speed": 200,
@@ -1012,7 +692,7 @@
       "shape": "circle"
     },
     {
-      "time": 33960,
+      "time": 31080,
       "type": "shooter",
       "y": 210,
       "speed": 200,
@@ -1020,7 +700,7 @@
       "shape": "circle"
     },
     {
-      "time": 34280,
+      "time": 31400,
       "type": "shooter",
       "y": 210,
       "speed": 200,
@@ -1028,7 +708,7 @@
       "shape": "circle"
     },
     {
-      "time": 35680,
+      "time": 32800,
       "type": "shooter",
       "y": 210,
       "speed": 200,
@@ -1036,7 +716,7 @@
       "shape": "circle"
     },
     {
-      "time": 36000,
+      "time": 33120,
       "type": "shooter",
       "y": 210,
       "speed": 200,
@@ -1044,7 +724,7 @@
       "shape": "circle"
     },
     {
-      "time": 36320,
+      "time": 33440,
       "type": "shooter",
       "y": 210,
       "speed": 200,
@@ -1052,7 +732,7 @@
       "shape": "circle"
     },
     {
-      "time": 36640,
+      "time": 33760,
       "type": "shooter",
       "y": 210,
       "speed": 200,
@@ -1060,7 +740,143 @@
       "shape": "circle"
     },
     {
-      "time": 38840,
+      "time": 35260,
+      "type": "shooter",
+      "y": 40,
+      "speed": 210,
+      "from": "right",
+      "vy": 100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 35260,
+      "type": "shooter",
+      "y": 380,
+      "speed": 210,
+      "from": "right",
+      "vy": -100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 35395,
+      "type": "shooter",
+      "y": 40,
+      "speed": 210,
+      "from": "right",
+      "vy": 100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 35395,
+      "type": "shooter",
+      "y": 380,
+      "speed": 210,
+      "from": "right",
+      "vy": -100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 35530,
+      "type": "shooter",
+      "y": 40,
+      "speed": 210,
+      "from": "right",
+      "vy": 100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 35530,
+      "type": "shooter",
+      "y": 380,
+      "speed": 210,
+      "from": "right",
+      "vy": -100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 36730,
+      "type": "shooter",
+      "y": 40,
+      "speed": 210,
+      "from": "left",
+      "vy": 100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 36730,
+      "type": "shooter",
+      "y": 380,
+      "speed": 210,
+      "from": "left",
+      "vy": -100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 36865,
+      "type": "shooter",
+      "y": 40,
+      "speed": 210,
+      "from": "left",
+      "vy": 100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 36865,
+      "type": "shooter",
+      "y": 380,
+      "speed": 210,
+      "from": "left",
+      "vy": -100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 37000,
+      "type": "shooter",
+      "y": 40,
+      "speed": 210,
+      "from": "left",
+      "vy": 100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 37000,
+      "type": "shooter",
+      "y": 380,
+      "speed": 210,
+      "from": "left",
+      "vy": -100,
+      "crossX": 480,
+      "shape": "triangle"
+    },
+    {
+      "time": 38200,
+      "type": "shooter",
+      "y": 210,
+      "speed": 215,
+      "from": "right",
+      "shape": "circle"
+    },
+    {
+      "time": 39600,
+      "type": "shooter",
+      "y": 210,
+      "speed": 215,
+      "from": "left",
+      "shape": "circle"
+    },
+    {
+      "time": 41800,
       "type": "shooter",
       "y": 100,
       "speed": 200,
@@ -1068,7 +884,7 @@
       "shape": "square"
     },
     {
-      "time": 39190,
+      "time": 42150,
       "type": "shooter",
       "y": 100,
       "speed": 200,
@@ -1076,7 +892,7 @@
       "shape": "square"
     },
     {
-      "time": 39540,
+      "time": 42500,
       "type": "shooter",
       "y": 320,
       "speed": 200,
@@ -1084,7 +900,7 @@
       "shape": "square"
     },
     {
-      "time": 39890,
+      "time": 42850,
       "type": "shooter",
       "y": 320,
       "speed": 200,
@@ -1092,7 +908,7 @@
       "shape": "square"
     },
     {
-      "time": 40940,
+      "time": 43900,
       "type": "shooter",
       "y": 100,
       "speed": 200,
@@ -1100,7 +916,7 @@
       "shape": "square"
     },
     {
-      "time": 41290,
+      "time": 44250,
       "type": "shooter",
       "y": 100,
       "speed": 200,
@@ -1108,7 +924,7 @@
       "shape": "square"
     },
     {
-      "time": 41640,
+      "time": 44600,
       "type": "shooter",
       "y": 320,
       "speed": 200,
@@ -1116,7 +932,7 @@
       "shape": "square"
     },
     {
-      "time": 41990,
+      "time": 44950,
       "type": "shooter",
       "y": 320,
       "speed": 200,
@@ -1124,7 +940,7 @@
       "shape": "square"
     },
     {
-      "time": 42790,
+      "time": 45750,
       "type": "shooter",
       "y": 40,
       "speed": 190,
@@ -1133,7 +949,7 @@
       "shape": "star"
     },
     {
-      "time": 43590,
+      "time": 46550,
       "type": "shooter",
       "y": 380,
       "speed": 190,
@@ -1142,7 +958,7 @@
       "shape": "star"
     },
     {
-      "time": 44390,
+      "time": 47350,
       "type": "shooter",
       "y": 40,
       "speed": 190,
@@ -1151,7 +967,7 @@
       "shape": "star"
     },
     {
-      "time": 45190,
+      "time": 48150,
       "type": "shooter",
       "y": 380,
       "speed": 190,
