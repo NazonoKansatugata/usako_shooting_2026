@@ -140,8 +140,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this._hp;
   }
 
+  /** DEFレベルに応じて底上げされる最大HP */
+  get maxHp(): number {
+    const defLevel = StatusManager.getInstance().getData(this.variant).def;
+    return GAME_CONFIG.PLAYER_HP + defLevel * GAME_CONFIG.DEF_HP_PER_LEVEL;
+  }
+
   public resetStats(): void {
-    this._hp = GAME_CONFIG.PLAYER_HP;
+    this._hp = this.maxHp;
     this._isInvulnerable = false;
     this.isDying = false;
     this.setAlpha(1);
@@ -163,8 +169,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public move(left: boolean, right: boolean, up: boolean, down: boolean): void {
     if (!this.active || this.isDying) return;
 
-    const vx = (right ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED - (left ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED;
-    const vy = (down ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED - (up ? 1 : 0) * GAME_CONFIG.PLAYER_SPEED;
+    // STRレベルに応じて移動速度が強化される
+    const strLevel = StatusManager.getInstance().getData(this.variant).str;
+    const speed = GAME_CONFIG.PLAYER_SPEED + strLevel * GAME_CONFIG.STR_SPEED_PER_LEVEL;
+    const vx = (right ? 1 : 0) * speed - (left ? 1 : 0) * speed;
+    const vy = (down ? 1 : 0) * speed - (up ? 1 : 0) * speed;
     this.setVelocity(vx, vy);
   }
 
@@ -239,10 +248,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const settings = SettingsManager.getInstance();
     // 難易度設定(難だと敵から受けるダメージが2倍になる)
     const baseDamage = customDamage ?? (settings.difficulty === 'hard' ? 2 : 1);
-    // DEFレベルに応じて被ダメージを軽減する（無敵化を防ぐため最低1ダメージは保証する）
-    const defLevel = StatusManager.getInstance().getData(this.variant).def;
-    const actualDamage = Math.max(1, baseDamage - Math.floor(defLevel / 2));
-    this._hp -= actualDamage;
+    this._hp -= baseDamage;
     if (this._hp <= 0) {
       this._hp = 0;
       return true; // 死亡

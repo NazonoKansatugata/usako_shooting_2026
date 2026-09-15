@@ -61,19 +61,23 @@ export class Hazard {
 
   private enterWarning(warningMs: number, activeMs: number): void {
     this.state = 'warning';
+    // シーン破棄（ボス撃破直後のクリア演出やゲームオーバー遷移）でthis.visualが先に破棄されていると
+    // bodyがundefinedになる。破棄後にタイマーが遅れて発火することがあるため、ここで安全に無視する。
+    if (!this.visual.active) return;
     this.visual.setVisible(true);
     (this.visual as Phaser.GameObjects.Rectangle).setFillStyle(0xff3b3b, 0.35);
-    const body = this.visual.body as Phaser.Physics.Arcade.Body;
-    body.enable = false;
+    const body = this.visual.body as Phaser.Physics.Arcade.Body | null;
+    if (body) body.enable = false;
     this.pendingTimer = this.scene.time.delayedCall(warningMs, () => this.enterActive(activeMs));
   }
 
   private enterActive(activeMs: number): void {
     this.state = 'active';
+    if (!this.visual.active) return;
     this.visual.setVisible(true);
     (this.visual as Phaser.GameObjects.Rectangle).setFillStyle(0xff3b3b, 0.75);
-    const body = this.visual.body as Phaser.Physics.Arcade.Body;
-    body.enable = true;
+    const body = this.visual.body as Phaser.Physics.Arcade.Body | null;
+    if (body) body.enable = true;
     this.colliders = this.players.map((player) =>
       this.scene.physics.add.overlap(player, this.visual, this.hitPlayer, undefined, this.scene),
     );
@@ -82,10 +86,11 @@ export class Hazard {
 
   private enterDone(): void {
     this.state = 'done';
-    this.visual.setVisible(false);
-    const body = this.visual.body as Phaser.Physics.Arcade.Body;
-    body.enable = false;
     this.colliders.forEach((collider) => collider.destroy());
     this.colliders = [];
+    if (!this.visual.active) return;
+    this.visual.setVisible(false);
+    const body = this.visual.body as Phaser.Physics.Arcade.Body | null;
+    if (body) body.enable = false;
   }
 }

@@ -28,7 +28,7 @@ const DEFAULT_STATUS_DATA: StatusSaveData = {
   p2: { ...DEFAULT_PLAYER_STATUS },
 };
 
-/** 敵撃破ドロップで貯まるステータスポイントと、WEP/STR/DEF/DEXへの割り振りを永続化するマネージャー */
+/** ゲームオーバーのたびに貯まるステータスポイントと、WEP/STR/DEF/DEXへの割り振りを永続化するマネージャー */
 export class StatusManager {
   private static instance: StatusManager;
   private data: StatusSaveData;
@@ -48,7 +48,7 @@ export class StatusManager {
     return { ...this.data[player] };
   }
 
-  /** 敵撃破ドロップ取得時に呼ぶ。ポイントを加算して即保存する。 */
+  /** ゲームオーバー時に呼ぶ。ポイントを加算して即保存する。 */
   public addPoint(player: PlayerVariant, amount = 1): void {
     this.data[player].points += amount;
     this.saveData();
