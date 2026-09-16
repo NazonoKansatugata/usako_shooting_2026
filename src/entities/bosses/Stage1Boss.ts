@@ -132,13 +132,14 @@ export class Stage1Boss extends Boss {
     this.beamInProgress = true;
 
     const y = Phaser.Math.Clamp(this.y, Stage1Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage1Boss.BEAM_Y_MARGIN);
+    // ボスのx座標より後ろ（画面右端側）までビームが伸びて見えないよう、ボスの位置までで留める
     const hazard = new Hazard(
       this.scene,
-      { kind: 'rect', width: GAME_CONFIG.PLAY_AREA.WIDTH, height: Stage1Boss.BEAM_HEIGHT },
+      { kind: 'rect', width: this.x, height: Stage1Boss.BEAM_HEIGHT },
       this.getPlayers(),
       this.hitPlayer,
     );
-    hazard.trigger(GAME_CONFIG.PLAY_AREA.WIDTH / 2, y, Stage1Boss.BEAM_WARNING_MS, Stage1Boss.BEAM_ACTIVE_MS);
+    hazard.trigger(this.x / 2, y, Stage1Boss.BEAM_WARNING_MS, Stage1Boss.BEAM_ACTIVE_MS);
     this.beamHazards.push(hazard);
   }
 

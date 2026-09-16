@@ -124,13 +124,14 @@ export class Stage2Boss extends Boss {
     const players = this.getPlayers();
     // 横一直線ビームのy座標は、自機ではなくボス自身のy座標に合わせる
     const y = Phaser.Math.Clamp(this.y, Stage2Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage2Boss.BEAM_Y_MARGIN);
+    // ボスのx座標より後ろ（画面右端側）までビームが伸びて見えないよう、ボスの位置までで留める
     const hazard = new Hazard(
       this.scene,
-      { kind: 'rect', width: GAME_CONFIG.PLAY_AREA.WIDTH, height: Stage2Boss.BEAM_HEIGHT },
+      { kind: 'rect', width: this.x, height: Stage2Boss.BEAM_HEIGHT },
       players,
       this.hitPlayer,
     );
-    hazard.trigger(GAME_CONFIG.PLAY_AREA.WIDTH / 2, y, Stage2Boss.BEAM_WARNING_MS, Stage2Boss.BEAM_ACTIVE_MS);
+    hazard.trigger(this.x / 2, y, Stage2Boss.BEAM_WARNING_MS, Stage2Boss.BEAM_ACTIVE_MS);
     this.beamHazards.push(hazard);
   }
 
