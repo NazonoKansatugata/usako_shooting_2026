@@ -6,6 +6,8 @@ export interface SaveData {
   maxClearedStage: Record<Difficulty, number>;
   /** 難易度ごとに全ステージクリア済みかどうか */
   allCleared: Record<Difficulty, boolean>;
+  /** 単独の「ボス戦」モードでボスを撃破済みかどうか（ステージ1〜3クリア状況とは独立） */
+  bossFightCleared: boolean;
 }
 
 const STORAGE_KEY = 'usako_shooting_save_v1';
@@ -14,6 +16,7 @@ const DEFAULT_SAVE_DATA: SaveData = {
   highScore: 0,
   maxClearedStage: { normal: 0, hard: 0 },
   allCleared: { normal: false, hard: false },
+  bossFightCleared: false,
 };
 
 /** クリア状況・ハイスコアなどの進行データを永続化するマネージャー */
@@ -44,6 +47,15 @@ export class SaveManager {
     return this.data.allCleared[difficulty];
   }
 
+  public isBossFightCleared(): boolean {
+    return this.data.bossFightCleared;
+  }
+
+  /** 「ボス戦」の解禁条件：ステージ3を普通・難いずれかの難易度でクリア済みか */
+  public hasClearedStage3(): boolean {
+    return this.getMaxClearedStage('normal') >= 3 || this.getMaxClearedStage('hard') >= 3;
+  }
+
   /** スコアを記録する。ハイスコアを更新した場合はtrueを返す */
   public reportScore(score: number): boolean {
     if (score > this.data.highScore) {
@@ -68,6 +80,13 @@ export class SaveManager {
     }
   }
 
+  public reportBossFightCleared(): void {
+    if (!this.data.bossFightCleared) {
+      this.data.bossFightCleared = true;
+      this.saveData();
+    }
+  }
+
   /** ハイスコア・クリア状況などのセーブデータをすべて消去する */
   public clearAll(): void {
     this.data = JSON.parse(JSON.stringify(DEFAULT_SAVE_DATA));
@@ -88,6 +107,7 @@ export class SaveManager {
           ...parsed,
           maxClearedStage: { ...DEFAULT_SAVE_DATA.maxClearedStage, ...parsed.maxClearedStage },
           allCleared: { ...DEFAULT_SAVE_DATA.allCleared, ...parsed.allCleared },
+          bossFightCleared: parsed.bossFightCleared ?? DEFAULT_SAVE_DATA.bossFightCleared,
         };
       }
     } catch (e) {

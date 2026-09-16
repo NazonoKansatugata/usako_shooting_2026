@@ -9,6 +9,8 @@ interface StatusSceneData {
   twoPlayer: boolean;
   score?: number;
   stageNumber?: number;
+  /** trueの場合、通常のステージ1からではなく独立した「ボス戦」（Stage4Boss）へ直接突入する */
+  startAtBonusStage?: boolean;
 }
 
 interface StatRow {
@@ -708,8 +710,7 @@ export class StatusScene extends Phaser.Scene {
   private finish(): void {
     this.playSound('optConfirm');
     if (this.sceneData.mode === 'gameStart') {
-      // 高難易度がONの状態でゲームを開始する場合、ステージ1からではなく即ボーナスステージ4のボス戦へ突入する
-      const startAtBonusStage = this.settingsManager.difficulty === 'hard';
+      const startAtBonusStage = this.sceneData.startAtBonusStage ?? false;
       this.scene.start('shooting', { twoPlayer: this.sceneData.twoPlayer, startAtBonusStage });
     } else {
       this.scene.stop();

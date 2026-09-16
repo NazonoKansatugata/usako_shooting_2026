@@ -8,7 +8,12 @@ type HitPlayerFn = (object1: any, object2: any) => void;
 
 /**
  * ステージ2ボス：上下バウンドしながら、自機狙いの扇状弾幕を一定間隔で発射する。
- * HP50%未満で、赤い警告帯（横一直線）→ビームの攻撃も追加する。
+ * 戦闘開始直後から常に一定間隔で、赤い警告帯（横一直線）→ビームの攻撃も発動する。
+ * さらに、同じく戦闘開始直後から常に一定間隔で「画面左から720pxの範囲を3分割した縦レーンの
+ * うち1本が点滅→その全域に極太の縦ビームが発生する」攻撃も他の攻撃と並行して発動する。
+ * どのレーンが危険になるかは乱数ではなく、黄金比を使った加法的数列（Weyl sequence）で
+ * 決めている。単純な巡回（左→中央→右→…）だと数手で読まれてしまうが、この数列は同じ
+ * レーンが短い周期で規則的に繰り返さないため、再現性を保ったまま予測しにくいパターンになる。
  */
 export class Stage2Boss extends Boss {
   static readonly TEXTURE_KEY = 'boss2';
@@ -19,7 +24,6 @@ export class Stage2Boss extends Boss {
   private static readonly BEAM_WARNING_MS = 700;
   private static readonly BEAM_ACTIVE_MS = 320;
   private static readonly BEAM_HEIGHT = 70;
-  private static readonly BEAM_HP_THRESHOLD = 0.5;
   private static readonly BEAM_Y_MARGIN = 60;
 
   /** 実写画像(QRコード)は正方形なので、見た目の高さをこの値に揃えて表示する */
@@ -28,11 +32,21 @@ export class Stage2Boss extends Boss {
   private static readonly HITBOX_WIDTH = 90;
   private static readonly HITBOX_HEIGHT = 90;
 
+  /** 縦レーン極太ビーム関連。画面左からCOLUMN_RANGE_WIDTHまでの範囲だけをCOLUMN_COUNT分割する（ボスのいる右側は対象外） */
+  private static readonly COLUMN_COUNT = 3;
+  private static readonly COLUMN_RANGE_WIDTH = 720;
+  private static readonly COLUMN_BEAM_INTERVAL = 3200;
+  private static readonly COLUMN_BEAM_WARNING_MS = 900;
+  private static readonly COLUMN_BEAM_ACTIVE_MS = 350;
+
   private fanTimer = 0;
   private beamTimer = 0;
-  private beamUnlocked = false;
   private beamHazards: Hazard[] = [];
   private beamInProgress = false;
+
+  private columnBeamTimer = 0;
+  private columnCycleCounter = 0;
+  private columnHazards: Hazard[] = [];
 
   /** 画像アセット読み込み失敗時（プリロード漏れ等）のフォールバック用に生成テクスチャも用意しておく */
   static ensureTexture(scene: Phaser.Scene): void {
@@ -65,9 +79,11 @@ export class Stage2Boss extends Boss {
   protected onSpawn(): void {
     this.fanTimer = 0;
     this.beamTimer = 0;
-    this.beamUnlocked = false;
     this.beamHazards = [];
     this.beamInProgress = false;
+    this.columnBeamTimer = 0;
+    this.columnCycleCounter = 0;
+    this.columnHazards = [];
     this.setVelocityY(80);
   }
 
@@ -78,15 +94,10 @@ export class Stage2Boss extends Boss {
       this.fireFanBarrage();
     }
 
-    if (!this.beamUnlocked && this.hpRatio < Stage2Boss.BEAM_HP_THRESHOLD) {
-      this.beamUnlocked = true;
-    }
-    if (this.beamUnlocked) {
-      this.beamTimer += delta;
-      if (this.beamTimer >= Stage2Boss.BEAM_INTERVAL) {
-        this.beamTimer = 0;
-        this.fireBeam();
-      }
+    this.beamTimer += delta;
+    if (this.beamTimer >= Stage2Boss.BEAM_INTERVAL) {
+      this.beamTimer = 0;
+      this.fireBeam();
     }
 
     if (this.beamHazards.length > 0) {
@@ -95,6 +106,16 @@ export class Stage2Boss extends Boss {
         this.beamInProgress = false;
         this.resumeVerticalMovement();
       }
+    }
+
+    // 縦レーン極太ビームはHPに関係なく戦闘開始直後から常に一定間隔で発動する（他の攻撃と並行）
+    this.columnBeamTimer += delta;
+    if (this.columnBeamTimer >= Stage2Boss.COLUMN_BEAM_INTERVAL) {
+      this.columnBeamTimer = 0;
+      this.fireColumnBeam();
+    }
+    if (this.columnHazards.length > 0) {
+      this.columnHazards = this.columnHazards.filter((h) => !h.isDone);
     }
   }
 
@@ -135,8 +156,34 @@ export class Stage2Boss extends Boss {
     this.beamHazards.push(hazard);
   }
 
+  /**
+   * 画面を3分割した縦レーンのうち1本を点滅させて警告し、その全域に極太の縦ビームを発生させる。
+   * どのレーンにするかはWeyl sequenceで固定的に決める（乱数不使用・単純巡回でもない）。
+   * ボス本体の移動には影響を与えず、他の攻撃と完全に並行して進行する。
+   */
+  private fireColumnBeam(): void {
+    this.columnCycleCounter += 1;
+    const columnIndex = Boss.nextWeylIndex(this.columnCycleCounter, Stage2Boss.COLUMN_COUNT);
+    const columnWidth = Stage2Boss.COLUMN_RANGE_WIDTH / Stage2Boss.COLUMN_COUNT;
+    const centerX = columnWidth * (columnIndex + 0.5);
+
+    const hazard = new Hazard(
+      this.scene,
+      { kind: 'rect', width: columnWidth, height: GAME_CONFIG.PLAY_AREA.HEIGHT },
+      this.getPlayers(),
+      this.hitPlayer,
+    );
+    hazard.trigger(
+      centerX, GAME_CONFIG.PLAY_AREA.HEIGHT / 2,
+      Stage2Boss.COLUMN_BEAM_WARNING_MS, Stage2Boss.COLUMN_BEAM_ACTIVE_MS, true,
+    );
+    this.columnHazards.push(hazard);
+  }
+
   protected override onDestroyHazards(): void {
     this.beamHazards.forEach((h) => h.forceEnd());
     this.beamHazards = [];
+    this.columnHazards.forEach((h) => h.forceEnd());
+    this.columnHazards = [];
   }
 }

@@ -79,11 +79,9 @@ export class ShootingScene extends Phaser.Scene {
   private fireTimer2 = 0;
   private bossPreEventTriggered = false;
   private bossDefeated = false;
-  /** 高難易度でステージ3クリア後、ボーナスステージ4（ボス戦）への案内を出す予定かどうか */
-  private bonusBossPending = false;
-  /** 高難易度でゲーム開始した場合、create()完了後に即ステージ4ボス戦へ突入する予定かどうか */
+  /** タイトルの「ボス戦」から開始した場合、create()完了後に即ステージ4ボス戦へ突入する予定かどうか */
   private pendingBonusStageStart = false;
-  /** 現在ボーナスステージ4のボス戦中かどうか（再度ボーナス提案しないための判定にも使う） */
+  /** 現在ステージ4ボス戦中かどうか */
   private isBonusBossFight = false;
   /** ボーナスボスのみステージJSON外のHPを使うため、bossMaxHp計算用に個別保持する */
   private bonusBossMaxHp?: number;
@@ -171,7 +169,7 @@ export class ShootingScene extends Phaser.Scene {
 
     this.createHud();
     this.startGame();
-    // 高難易度でゲーム開始した場合は、通常のステージ1からではなく即ボーナスステージ4のボス戦へ突入する。
+    // タイトルの「ボス戦」から開始した場合は、通常のステージ1からではなく即ボス戦へ突入する。
     // startBonusBossStage()はstartGame()が作った雑魚敵・BGM等をリセットし直すので順序はこれでよい。
     if (this.pendingBonusStageStart) {
       this.pendingBonusStageStart = false;
@@ -184,12 +182,10 @@ export class ShootingScene extends Phaser.Scene {
       if (!this.load.isLoading()) this.load.start();
     });
 
-    // ステージクリア後のステータス画面（'status'シーン）が完了すると本シーンがresumeされる。
-    // その時点で次ステージ（またはボーナスステージ4のボス戦）開始処理を行う。
+    // ステージクリア後のステータス画面（'status'シーン）が完了すると本シーンがresumeされ、次ステージ開始処理を行う。
     this.events.on('resume', () => {
       if (this.mode !== 'stageClear') return;
-      if (this.bonusBossPending) this.startBonusBossStage();
-      else this.startNextStage();
+      this.startNextStage();
     });
 
     this.input.keyboard!.on('keydown-ENTER', () => {
@@ -199,7 +195,7 @@ export class ShootingScene extends Phaser.Scene {
           mode: 'stageClear',
           twoPlayer: this.twoPlayer,
           score: this.score,
-          stageNumber: this.bonusBossPending ? 4 : this.stageManager.stageNumber,
+          stageNumber: this.stageManager.stageNumber,
         });
       } else if (this.mode === 'clear') {
         // 'gameOver'はfinish()内でシーン遷移前に同期的にセットされるため、ここで反応すると
@@ -381,7 +377,6 @@ export class ShootingScene extends Phaser.Scene {
     this.fireTimer2 = 0;
     this.bossPreEventTriggered = false;
     this.bossDefeated = false;
-    this.bonusBossPending = false;
     this.isBonusBossFight = false;
     this.bonusBossMaxHp = undefined;
     this.score = 0;
@@ -911,13 +906,15 @@ export class ShootingScene extends Phaser.Scene {
   }
 
   /**
-   * 高難易度限定のボーナスステージ4。雑魚敵の波は一切なく、開始直後にボス戦へ突入する
-   * （デバッグジャンプのtoBoss=trueと同じ考え方）。StageManagerのステージ数はステージ3の
-   * ままにしておき（stageNumberは変えない）、専用のボスHP・弾設定はScene側で直接持つ。
+   * タイトルの「ボス戦」から突入する独立したボス単体戦。雑魚敵の波は一切なく、開始直後に
+   * ボス戦へ突入する（デバッグジャンプのtoBoss=trueと同じ考え方）。専用のボスHP・弾設定は
+   * Scene側で直接持つ。startGame()がstageManagerを先頭ステージへリセットしてから呼ばれる
+   * 経路があるため、advance()の最終ステージ判定を正しくするためここで最終ステージへ固定する。
    */
   private startBonusBossStage(): void {
     this.hideStageClearPanel();
     this.mode = 'playing';
+    this.stageManager.jumpToStage(this.stageManager.totalStages - 1);
     this.isBonusBossFight = true;
     this.stageTime = 0;
     this.fireTimer1 = 0;
@@ -962,7 +959,6 @@ export class ShootingScene extends Phaser.Scene {
     this.fireTimer2 = 0;
     this.bossPreEventTriggered = false;
     this.bossDefeated = false;
-    this.bonusBossPending = false;
     this.isBonusBossFight = false;
     this.bonusBossMaxHp = undefined;
 
@@ -1428,11 +1424,6 @@ export class ShootingScene extends Phaser.Scene {
       if (progress === 1) {
         if (this.stageManager.advance()) {
           this.enterStageClear(clearedStage);
-        } else if (!this.isBonusBossFight && this.settingsManager.difficulty === 'hard') {
-          // 高難易度なら、最終ステージクリア後に一度だけボーナスステージ4（ボス戦）へ案内する。
-          // isBonusBossFightは既にボーナス戦を経た（=この分岐を再度通ってはいけない）ことの判定も兼ねる。
-          this.bonusBossPending = true;
-          this.enterStageClear(clearedStage);
         } else {
           this.finish('clear');
         }
@@ -1500,8 +1491,12 @@ export class ShootingScene extends Phaser.Scene {
 
     const difficulty = this.settingsManager.difficulty;
     if (mode === 'clear') {
-      this.saveManager.reportStageCleared(this.stageManager.stageNumber, difficulty);
-      this.saveManager.reportAllCleared(difficulty);
+      if (this.isBonusBossFight) {
+        this.saveManager.reportBossFightCleared();
+      } else {
+        this.saveManager.reportStageCleared(this.stageManager.stageNumber, difficulty);
+        this.saveManager.reportAllCleared(difficulty);
+      }
     }
     const isNewHighScore = this.saveManager.reportScore(this.score);
 
@@ -1528,7 +1523,7 @@ export class ShootingScene extends Phaser.Scene {
       return;
     }
 
-    this.banner.setText('ALL STAGE CLEAR!').setVisible(true);
+    this.banner.setText(this.isBonusBossFight ? 'BOSS CLEAR!' : 'ALL STAGE CLEAR!').setVisible(true);
     const highScoreLine = isNewHighScore ? '\n★ NEW HIGH SCORE ★' : `\nハイスコア：${this.saveManager.highScore}`;
     this.instruction.setText(
       `SCORE：${this.score}${highScoreLine}\n\nENTER：もう一度プレイ　　ESC / T：タイトルへ戻る`,

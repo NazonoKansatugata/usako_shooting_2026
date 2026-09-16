@@ -10,6 +10,20 @@ export abstract class Boss extends Phaser.Physics.Arcade.Sprite {
   protected maxHp = 40;
   private savedVelocityY = 80;
 
+  /** 黄金比の共役数。加法的数列(Weyl sequence)で「固定だが単純な周期にならない」選択を作るのに使う */
+  private static readonly WEYL_STEP = 0.6180339887498949;
+
+  /**
+   * 黄金比を使った加法的数列（Weyl sequence）で0〜count-1のインデックスを決定的に返す。
+   * 乱数を使わないため同じcounterなら常に同じ結果になり再現性があるが、単純な巡回
+   * （0,1,2,0,1,2…）と違って短い周期で同じ並びが繰り返されないため、プレイヤーが
+   * 次にどこが危険になるか読みにくい。「安置」や「危険レーン」の固定巡回パターンに使う。
+   */
+  protected static nextWeylIndex(counter: number, count: number): number {
+    const frac = (counter * Boss.WEYL_STEP) % 1;
+    return Math.floor(frac * count);
+  }
+
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
     super(scene, x, y, texture);
     scene.add.existing(this);
