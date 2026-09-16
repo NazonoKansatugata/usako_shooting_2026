@@ -181,11 +181,13 @@ export class StatusScene extends Phaser.Scene {
       });
     }
 
-    this.add.text(GAME_CONFIG.WIDTH / 2, 70, 'ステータスポイントを好きなように振り分けて、うさこ号をパワーアップさせよう！', {
+    this.add.text(GAME_CONFIG.WIDTH / 2, 64, 'ステータスポイントを好きなように振り分けて、\nうさこ号をパワーアップさせよう！', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '13px',
+      fontSize: '16px',
       color: '#a9d6e5',
-    }).setOrigin(0.5).setDepth(2);
+      align: 'center',
+      lineSpacing: 2,
+    }).setOrigin(0.5, 0).setDepth(2);
   }
 
   /**
@@ -239,9 +241,9 @@ export class StatusScene extends Phaser.Scene {
   private createSummaryPanel(): void {
     const panel = this.add.graphics().setDepth(1);
     panel.fillStyle(0x061a4a, 0.7);
-    panel.fillRoundedRect(24, 96, 230, 118, 10);
+    panel.fillRoundedRect(24, 96, 210, 118, 10);
     panel.lineStyle(1.5, 0x1e55b7, 0.8);
-    panel.strokeRoundedRect(24, 96, 230, 118, 10);
+    panel.strokeRoundedRect(24, 96, 210, 118, 10);
 
     const lines = [
       `Score   ${this.sceneData.score ?? 0}`,
