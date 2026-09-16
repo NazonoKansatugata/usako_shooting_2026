@@ -21,6 +21,12 @@ type InstaKillPlayerFn = (player: Phaser.Physics.Arcade.Sprite) => void;
 export class Stage4Boss extends Boss {
   static readonly TEXTURE_KEY = 'boss4';
 
+  /** 実写画像は正方形なので、見た目の高さをこの値に揃えて表示する */
+  private static readonly DISPLAY_HEIGHT = 150;
+  /** 画像が正方形なのに合わせて、当たり判定も正方形寄りにする */
+  private static readonly HITBOX_WIDTH = 100;
+  private static readonly HITBOX_HEIGHT = 100;
+
   private static readonly PATROL_SPEED = 130;
 
   private static readonly BEAM_HP_THRESHOLD = 0.5;
@@ -55,6 +61,7 @@ export class Stage4Boss extends Boss {
   private dangerOverlay?: Phaser.GameObjects.Rectangle;
   private safeZoneVisual?: Phaser.GameObjects.Rectangle;
 
+  /** 画像アセット読み込み失敗時（プリロード漏れ等）のフォールバック用に生成テクスチャも用意しておく */
   static ensureTexture(scene: Phaser.Scene): void {
     if (scene.textures.exists(Stage4Boss.TEXTURE_KEY)) return;
     const g = scene.make.graphics({ x: 0, y: 0 });
@@ -74,6 +81,12 @@ export class Stage4Boss extends Boss {
   ) {
     Stage4Boss.ensureTexture(scene);
     super(scene, x, y, Stage4Boss.TEXTURE_KEY);
+
+    // 実写画像は元解像度のままだと大きすぎるため見た目だけ縮小する。setScale()は当たり判定の
+    // setSize()より先に呼ぶ必要がある（setSize()は呼び出し時点のスケールを当たり判定へ焼き込むため）。
+    const scale = Stage4Boss.DISPLAY_HEIGHT / this.height;
+    this.setScale(scale);
+    (this.body as Phaser.Physics.Arcade.Body).setSize(Stage4Boss.HITBOX_WIDTH, Stage4Boss.HITBOX_HEIGHT);
   }
 
   protected onSpawn(): void {
@@ -127,14 +140,15 @@ export class Stage4Boss extends Boss {
     const target = this.nearestPlayer(players);
 
     // 横一直線ビームのy座標は、自機や乱数ではなくボス自身の（決定的に動く）y座標に合わせる
+    // ボスのx座標より後ろ（画面右端側）までビームが伸びて見えないよう、ボスの位置までで留める
     const y = Phaser.Math.Clamp(this.y, Stage4Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage4Boss.BEAM_Y_MARGIN);
     const horizontalHazard = new Hazard(
       this.scene,
-      { kind: 'rect', width: GAME_CONFIG.PLAY_AREA.WIDTH, height: Stage4Boss.BEAM_HEIGHT },
+      { kind: 'rect', width: this.x, height: Stage4Boss.BEAM_HEIGHT },
       players,
       this.hitPlayer,
     );
-    horizontalHazard.trigger(GAME_CONFIG.PLAY_AREA.WIDTH / 2, y, Stage4Boss.BEAM_WARNING_MS, Stage4Boss.BEAM_ACTIVE_MS);
+    horizontalHazard.trigger(this.x / 2, y, Stage4Boss.BEAM_WARNING_MS, Stage4Boss.BEAM_ACTIVE_MS);
     this.beamHazards.push(horizontalHazard);
 
     // 横だけだと安全地帯を見つけやすく簡単すぎるため、発射時点の自機のx座標に縦ビームも同時に出す

@@ -75,7 +75,7 @@ export class Hazard {
     this.state = 'active';
     if (!this.visual.active) return;
     this.visual.setVisible(true);
-    (this.visual as Phaser.GameObjects.Rectangle).setFillStyle(0xff3b3b, 0.75);
+    (this.visual as Phaser.GameObjects.Rectangle).setFillStyle(0x39ff14, 0.75);
     const body = this.visual.body as Phaser.Physics.Arcade.Body | null;
     if (body) body.enable = true;
     this.colliders = this.players.map((player) =>

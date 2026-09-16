@@ -124,14 +124,15 @@ export class Stage3Boss extends Boss {
     }
 
     // 横：縦ビームと同時に、自機の高さ付近に横一直線のビームも発射（警告帯の外が安全地帯）
+    // ボスのx座標より後ろ（画面右端側）までビームが伸びて見えないよう、ボスの位置までで留める
     const beamY = Phaser.Math.Clamp(target.y, Stage3Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage3Boss.BEAM_Y_MARGIN);
     const horizontalHazard = new Hazard(
       this.scene,
-      { kind: 'rect', width: GAME_CONFIG.PLAY_AREA.WIDTH, height: Stage3Boss.HORIZONTAL_BEAM_HEIGHT },
+      { kind: 'rect', width: this.x, height: Stage3Boss.HORIZONTAL_BEAM_HEIGHT },
       players,
       this.hitPlayer,
     );
-    horizontalHazard.trigger(GAME_CONFIG.PLAY_AREA.WIDTH / 2, beamY, warningMs, Stage3Boss.ACTIVE_MS);
+    horizontalHazard.trigger(this.x / 2, beamY, warningMs, Stage3Boss.ACTIVE_MS);
     this.activeHazards.push(horizontalHazard);
   }
 

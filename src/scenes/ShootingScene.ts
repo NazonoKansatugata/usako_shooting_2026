@@ -87,7 +87,7 @@ export class ShootingScene extends Phaser.Scene {
   private isBonusBossFight = false;
   /** ボーナスボスのみステージJSON外のHPを使うため、bossMaxHp計算用に個別保持する */
   private bonusBossMaxHp?: number;
-  private static readonly BONUS_BOSS_HP = 130;
+  private static readonly BONUS_BOSS_HP = 150;
   private score = 0;
   private static readonly SCORE_ENEMY_DEFEAT = 100;
   private static readonly SCORE_BOSS_DEFEAT = 3000;
