@@ -7,6 +7,8 @@ interface MenuItem {
   text: string;
   action: () => void;
   description: string;
+  /** trueの場合、選択はできてもaction()は実行されない（未解禁扱い） */
+  locked?: boolean;
 }
 
 type StartPlayMode = 'onePlayer' | 'twoPlayer';
@@ -354,6 +356,7 @@ export class TitleScene extends Phaser.Scene {
 
   private createMenu(): void {
     this.startPlayMode = 'onePlayer';
+    const bossFightUnlocked = SaveManager.getInstance().hasClearedStage3();
 
     this.menuItems = [
       {
@@ -380,6 +383,21 @@ export class TitleScene extends Phaser.Scene {
         action: () => {
           this.titleBgm?.stop();
           this.scene.start('option');
+        },
+      },
+      {
+        text: bossFightUnlocked ? 'ボス戦' : 'ボス戦 🔒（未解禁）',
+        description: bossFightUnlocked
+          ? '隠しボスとの一騎打ちに挑みます。難易度設定（被ダメージ）が反映されます。'
+          : 'ステージ3を（普通・難、いずれかで）クリアすると挑戦できるようになります。',
+        locked: !bossFightUnlocked,
+        action: () => {
+          this.titleBgm?.stop();
+          this.scene.start('status', {
+            mode: 'gameStart',
+            twoPlayer: this.startPlayMode === 'twoPlayer',
+            startAtBonusStage: true,
+          });
         },
       },
     ];
@@ -540,8 +558,13 @@ export class TitleScene extends Phaser.Scene {
 
   private executeSelect(): void {
     if (this.isIntroPlaying || this.modalOpen) return;
+    const item = this.menuItems[this.selectedIndex];
+    if (item.locked) {
+      this.playSound('titleSelect');
+      return;
+    }
     this.playSound('titleConfirm');
-    this.menuItems[this.selectedIndex].action();
+    item.action();
   }
 
   private createStartSwitchArrow(): void {
@@ -642,7 +665,14 @@ export class TitleScene extends Phaser.Scene {
         text.setX(bounds.x + bounds.width / 2).setY(y);
       }
 
-      if (i === this.selectedIndex) {
+      if (this.menuItems[i].locked) {
+        text.setColor('#5b6472').setFontSize(i === 0 ? 25 : 22).setStyle({ fontStyle: 'normal' });
+        this.menuBackplates[i].clear();
+        this.menuBackplates[i].fillStyle(0x061a4a, 0.35);
+        this.menuBackplates[i].fillRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
+        this.menuBackplates[i].lineStyle(1, 0x334155, 0.4);
+        this.menuBackplates[i].strokeRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
+      } else if (i === this.selectedIndex) {
         text.setColor('#f6d365').setFontSize(i === 0 ? 27 : 24).setStyle({ fontStyle: 'bold' });
         this.menuBackplates[i].clear();
         this.menuBackplates[i].fillStyle(0x0d4fa6, 0.9);
@@ -695,6 +725,8 @@ export class TitleScene extends Phaser.Scene {
       '',
       `クリア状況（普通）：${describe('normal')}`,
       `クリア状況（難）　：${describe('hard')}`,
+      '',
+      `ボス戦：${saveManager.isBossFightCleared() ? 'クリア済み' : '未クリア'}`,
       '',
       '※記録はオプションの「データ削除」からいつでも消去できます。',
     ]);

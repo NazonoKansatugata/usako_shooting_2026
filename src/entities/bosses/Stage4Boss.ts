@@ -58,6 +58,7 @@ export class Stage4Boss extends Boss {
   private ultimateState: 'idle' | 'warning' | 'active' = 'idle';
   private ultimateTimer = 0;
   private safeZoneIndex = 0;
+  private safeZoneCycleCounter = 0;
   private dangerOverlay?: Phaser.GameObjects.Rectangle;
   private safeZoneVisual?: Phaser.GameObjects.Rectangle;
 
@@ -97,6 +98,7 @@ export class Stage4Boss extends Boss {
     this.ultimateState = 'idle';
     this.ultimateTimer = 0;
     this.safeZoneIndex = 0;
+    this.safeZoneCycleCounter = 0;
     this.setVelocityY(Stage4Boss.PATROL_SPEED);
   }
 
@@ -242,7 +244,10 @@ export class Stage4Boss extends Boss {
     this.dangerOverlay?.setVisible(false);
     this.safeZoneVisual?.setVisible(false);
     this.resumeVerticalMovement();
-    this.safeZoneIndex = (this.safeZoneIndex + 1) % Stage4Boss.SAFE_ZONE_CENTERS.length;
+    // 単純な巡回（左上→右上→右下→左下…）だと数回で読まれて回避され続けてしまうため、
+    // Weyl sequenceで次の安置を決める（乱数は使わないが単純な周期にはならない）。
+    this.safeZoneCycleCounter += 1;
+    this.safeZoneIndex = Boss.nextWeylIndex(this.safeZoneCycleCounter, Stage4Boss.SAFE_ZONE_CENTERS.length);
   }
 
   protected override onDestroyHazards(): void {

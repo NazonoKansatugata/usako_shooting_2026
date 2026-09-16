@@ -18,6 +18,7 @@ export class Hazard {
   private readonly visual: Phaser.GameObjects.Shape;
   private colliders: Phaser.Physics.Arcade.Collider[] = [];
   private pendingTimer?: Phaser.Time.TimerEvent;
+  private flickerTween?: Phaser.Tweens.Tween;
   private state: 'idle' | 'warning' | 'active' | 'done' = 'idle';
 
   constructor(scene: Phaser.Scene, shape: HazardShape, players: Phaser.Physics.Arcade.Sprite[], hitPlayer: HitPlayerFn) {
@@ -42,11 +43,14 @@ export class Hazard {
     return this.state === 'done' || this.state === 'idle';
   }
 
-  /** x,yを中心に警告→発生を開始する。warningMs<=0なら警告なしで即active（爆弾の爆風用） */
-  public trigger(x: number, y: number, warningMs: number, activeMs: number): void {
+  /**
+   * x,yを中心に警告→発生を開始する。warningMs<=0なら警告なしで即active（爆弾の爆風用）。
+   * flicker=trueにすると、警告表示が点滅する（通常の半透明表示より視認性・緊迫感を高めたい攻撃用）。
+   */
+  public trigger(x: number, y: number, warningMs: number, activeMs: number, flicker = false): void {
     this.visual.setPosition(x, y);
     if (warningMs > 0) {
-      this.enterWarning(warningMs, activeMs);
+      this.enterWarning(warningMs, activeMs, flicker);
     } else {
       this.enterActive(activeMs);
     }
@@ -56,25 +60,40 @@ export class Hazard {
   public forceEnd(): void {
     this.pendingTimer?.remove();
     this.pendingTimer = undefined;
+    this.flickerTween?.stop();
+    this.flickerTween = undefined;
     if (this.state !== 'idle') this.enterDone();
   }
 
-  private enterWarning(warningMs: number, activeMs: number): void {
+  private enterWarning(warningMs: number, activeMs: number, flicker: boolean): void {
     this.state = 'warning';
     // シーン破棄（ボス撃破直後のクリア演出やゲームオーバー遷移）でthis.visualが先に破棄されていると
     // bodyがundefinedになる。破棄後にタイマーが遅れて発火することがあるため、ここで安全に無視する。
     if (!this.visual.active) return;
     this.visual.setVisible(true);
+    this.visual.setAlpha(1);
     (this.visual as Phaser.GameObjects.Rectangle).setFillStyle(0xff3b3b, 0.35);
     const body = this.visual.body as Phaser.Physics.Arcade.Body | null;
     if (body) body.enable = false;
+    if (flicker) {
+      this.flickerTween = this.scene.tweens.add({
+        targets: this.visual,
+        alpha: { from: 1, to: 0.2 },
+        duration: 130,
+        yoyo: true,
+        repeat: -1,
+      });
+    }
     this.pendingTimer = this.scene.time.delayedCall(warningMs, () => this.enterActive(activeMs));
   }
 
   private enterActive(activeMs: number): void {
     this.state = 'active';
+    this.flickerTween?.stop();
+    this.flickerTween = undefined;
     if (!this.visual.active) return;
     this.visual.setVisible(true);
+    this.visual.setAlpha(1);
     (this.visual as Phaser.GameObjects.Rectangle).setFillStyle(0x39ff14, 0.75);
     const body = this.visual.body as Phaser.Physics.Arcade.Body | null;
     if (body) body.enable = true;
