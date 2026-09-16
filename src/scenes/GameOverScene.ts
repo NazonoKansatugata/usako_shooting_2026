@@ -8,6 +8,8 @@ interface GameOverData {
   highScore?: number;
   isNewHighScore?: boolean;
   twoPlayer?: boolean;
+  /** trueの場合、ステージ1からではなく独立した「ボス戦」（オプションのボス戦）で敗北した */
+  startAtBonusStage?: boolean;
 }
 
 interface GameOverMenuItem {
@@ -20,6 +22,7 @@ export class GameOverScene extends Phaser.Scene {
   private highScore = 0;
   private isNewHighScore = false;
   private twoPlayer = false;
+  private startAtBonusStage = false;
   private bgm?: Phaser.Sound.BaseSound;
 
   private selectedIndex = 0;
@@ -38,6 +41,7 @@ export class GameOverScene extends Phaser.Scene {
     this.highScore = data.highScore ?? 0;
     this.isNewHighScore = data.isNewHighScore ?? false;
     this.twoPlayer = data.twoPlayer ?? false;
+    this.startAtBonusStage = data.startAtBonusStage ?? false;
     this.selectedIndex = 0;
   }
 
@@ -96,7 +100,11 @@ export class GameOverScene extends Phaser.Scene {
         text: 'もう一度プレイ (Retry)',
         action: () => {
           this.bgm?.stop();
-          this.scene.start('status', { mode: 'gameStart', twoPlayer: this.twoPlayer });
+          this.scene.start('status', {
+            mode: 'gameStart',
+            twoPlayer: this.twoPlayer,
+            startAtBonusStage: this.startAtBonusStage,
+          });
         },
       },
       {

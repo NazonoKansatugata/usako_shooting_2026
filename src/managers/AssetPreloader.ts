@@ -16,10 +16,23 @@ const STAGE1_IMAGES: readonly ImageAsset[] = [
   ['dialogue-usako', 'assets/picture/player/DefineSprite_44/1.png'],
   ['dialogue-nekoko', 'assets/picture/player/DefineSprite_54/1.png'],
   ['dialogue-keroko', 'assets/picture/player/DefineSprite_190/4.png'],
-  ['boss1', 'assets/sprites/DefineSprite_953/2.png'],
+  ['boss1', 'assets/picture/boss/stage1boss.png'],
   ['boss2', 'assets/picture/boss/boss2.png'],
   ['boss4', 'assets/picture/boss/boss4.png'],
 ];
+
+/** 雑魚敵撃破時の爆発アニメーションのコマ数（DefineSprite_537の1〜15.png） */
+export const ENEMY_EXPLOSION_FRAME_COUNT = 15;
+
+/** 雑魚敵撃破時の爆発アニメーションの各コマのテクスチャキー */
+export function enemyExplosionFrameKey(frame: number): string {
+  return `enemy-explosion-${frame}`;
+}
+
+const ENEMY_EXPLOSION_IMAGES: readonly ImageAsset[] = Array.from(
+  { length: ENEMY_EXPLOSION_FRAME_COUNT },
+  (_, i) => [enemyExplosionFrameKey(i + 1), `assets/sprites/DefineSprite_537/${i + 1}.png`] as const,
+);
 
 const STAGE1_AUDIO: readonly AudioAsset[] = [
   ['stage_bgm', 'assets/bgm/1226(ステージテーマ).mp3'],
@@ -51,7 +64,7 @@ function queueAssets(scene: Phaser.Scene, images: readonly ImageAsset[], audio: 
 
 /** 起動中に取得する、ステージ1のプレイ開始に必要な素材。 */
 export function preloadStage1Assets(scene: Phaser.Scene): void {
-  queueAssets(scene, STAGE1_IMAGES, STAGE1_AUDIO);
+  queueAssets(scene, [...STAGE1_IMAGES, ...ENEMY_EXPLOSION_IMAGES], STAGE1_AUDIO);
 }
 
 /** ステージ開始後にバックグラウンドで取得する、ゲームオーバー画面の素材。 */

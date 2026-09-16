@@ -19,7 +19,7 @@ import { StageManager } from '../managers/StageManager';
 import { SettingsManager } from '../managers/SettingsManager';
 import { SaveManager } from '../managers/SaveManager';
 import { StatusManager } from '../managers/StatusManager';
-import { preloadPostStageAssets, preloadStage1Assets } from '../managers/AssetPreloader';
+import { preloadPostStageAssets, preloadStage1Assets, enemyExplosionFrameKey, ENEMY_EXPLOSION_FRAME_COUNT } from '../managers/AssetPreloader';
 import { DialogueWindow } from '../ui/DialogueWindow';
 import { StoryManager } from '../managers/StoryManager';
 
@@ -159,6 +159,7 @@ export class ShootingScene extends Phaser.Scene {
 
     this.createTextures();
     this.createPlayerAnimation();
+    this.createEnemyExplosionAnimation();
     this.createGroups();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -202,7 +203,11 @@ export class ShootingScene extends Phaser.Scene {
         // 死亡演出～GameOverScene遷移までの間にEnterを押した際、本来のGameOverScene→ステータス画面
         // （難易度反映）を経由せずstartGame()で即座に普通の難易度で再開してしまうバグになる。
         // 'gameOver'はここでは無視し、必ずGameOverScene→ステータス画面経由で再開させる。
-        this.startGame();
+        if (this.isBonusBossFight) {
+          this.scene.start('title');
+        } else {
+          this.startGame();
+        }
       }
     });
 
@@ -333,6 +338,17 @@ export class ShootingScene extends Phaser.Scene {
         repeat: -1,
       });
     }
+  }
+
+  /** 雑魚敵撃破時の爆発演出用アニメーション（DefineSprite_537の1〜15.pngをコマ送り） */
+  private createEnemyExplosionAnimation(): void {
+    if (this.anims.exists('enemy-explosion')) return;
+    this.anims.create({
+      key: 'enemy-explosion',
+      frames: Array.from({ length: ENEMY_EXPLOSION_FRAME_COUNT }, (_, i) => ({ key: enemyExplosionFrameKey(i + 1) })),
+      frameRate: 24,
+      repeat: 0,
+    });
   }
 
   private createGroups(): void {
@@ -1270,11 +1286,19 @@ export class ShootingScene extends Phaser.Scene {
     if (!bullet || !enemy || !bullet.active || !enemy.active) return;
     bullet.disableBody(true, true);
     if (enemy.takeDamage()) {
+      this.playEnemyExplosion(enemy.x, enemy.y);
       enemy.disableBody(true, true);
       this.sound.play('se_enemy_defeat', { volume: this.seVolume(0.45) });
       this.score += ShootingScene.SCORE_ENEMY_DEFEAT;
       this.updateHud();
     }
+  }
+
+  /** 雑魚敵撃破時に爆発アニメーション（DefineSprite_537の1〜15コマ）を1回再生し、終わったら破棄する */
+  private playEnemyExplosion(x: number, y: number): void {
+    const explosion = this.add.sprite(x, y, enemyExplosionFrameKey(1)).setDepth(8);
+    explosion.play('enemy-explosion');
+    explosion.once('animationcomplete', () => explosion.destroy());
   }
 
   private hitBoss(object1: any, object2: any): void {
@@ -1517,6 +1541,7 @@ export class ShootingScene extends Phaser.Scene {
             highScore: this.saveManager.highScore,
             isNewHighScore,
             twoPlayer: this.twoPlayer,
+            startAtBonusStage: this.isBonusBossFight,
           });
         });
       });
@@ -1525,9 +1550,10 @@ export class ShootingScene extends Phaser.Scene {
 
     this.banner.setText(this.isBonusBossFight ? 'BOSS CLEAR!' : 'ALL STAGE CLEAR!').setVisible(true);
     const highScoreLine = isNewHighScore ? '\n★ NEW HIGH SCORE ★' : `\nハイスコア：${this.saveManager.highScore}`;
-    this.instruction.setText(
-      `SCORE：${this.score}${highScoreLine}\n\nENTER：もう一度プレイ　　ESC / T：タイトルへ戻る`,
-    ).setVisible(true);
+    const retryLine = this.isBonusBossFight
+      ? 'ENTER / ESC / T：タイトルへ戻る'
+      : 'ENTER：もう一度プレイ　　ESC / T：タイトルへ戻る';
+    this.instruction.setText(`SCORE：${this.score}${highScoreLine}\n\n${retryLine}`).setVisible(true);
   }
 
   private playStageBgm(): void {
