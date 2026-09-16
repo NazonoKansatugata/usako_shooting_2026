@@ -211,7 +211,7 @@
     },
     {
       "id": "s1_late_06",
-      "triggerType": "event",
+      "triggerType": "progress",
       "eventId": "s1_late",
       "triggerPercent": 75,
       "speaker": "ねここ",
@@ -220,7 +220,7 @@
     },
     {
       "id": "s1_late_07",
-      "triggerType": "event",
+      "triggerType": "progress",
       "eventId": "s1_late",
       "triggerPercent": 75,
       "speaker": "うさこ",
@@ -245,7 +245,7 @@
       "id": "s1_bosspre_03",
       "triggerType": "bossDefeat",
       "speaker": "うさこ",
-      "text": "早めに成敗できてよかったウサ",
+      "text": "生き残りは成敗するウサ",
       "duration": 1500
     },
     {
