@@ -21,7 +21,14 @@ export class Hazard {
   private flickerTween?: Phaser.Tweens.Tween;
   private state: 'idle' | 'warning' | 'active' | 'done' = 'idle';
 
-  constructor(scene: Phaser.Scene, shape: HazardShape, players: Phaser.Physics.Arcade.Sprite[], hitPlayer: HitPlayerFn) {
+  /** depth省略時は4（ボスのdepth=0より手前）。ボス画像を隠したくない横一直線ビームなどはボスより奥のdepthを指定する */
+  constructor(
+    scene: Phaser.Scene,
+    shape: HazardShape,
+    players: Phaser.Physics.Arcade.Sprite[],
+    hitPlayer: HitPlayerFn,
+    depth = 4,
+  ) {
     this.scene = scene;
     this.players = players;
     this.hitPlayer = hitPlayer;
@@ -30,7 +37,7 @@ export class Hazard {
       shape.kind === 'rect'
         ? scene.add.rectangle(0, 0, shape.width, shape.height, 0xff3b3b, 0.35)
         : scene.add.circle(0, 0, shape.radius, 0xff3b3b, 0.35);
-    this.visual.setDepth(4).setVisible(false);
+    this.visual.setDepth(depth).setVisible(false);
 
     scene.physics.add.existing(this.visual, false);
     const body = this.visual.body as Phaser.Physics.Arcade.Body;

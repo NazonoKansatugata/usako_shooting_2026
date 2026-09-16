@@ -11,7 +11,7 @@ interface MenuItem {
   locked?: boolean;
 }
 
-type StartPlayMode = 'onePlayer' | 'twoPlayer';
+type StartPlayMode = 'onePlayer' | 'twoPlayer' | 'bossFight';
 
 export class TitleScene extends Phaser.Scene {
   private selectedIndex = 0;
@@ -20,8 +20,11 @@ export class TitleScene extends Phaser.Scene {
   private menuTexts: Phaser.GameObjects.Text[] = [];
   private menuBackplates: Phaser.GameObjects.Graphics[] = [];
   private menuHitAreas: Phaser.GameObjects.Zone[] = [];
-  private startSwitchArrow?: Phaser.GameObjects.Text;
-  private startSwitchHitArea?: Phaser.GameObjects.Zone;
+  private startSwitchLeftArrow?: Phaser.GameObjects.Text;
+  private startSwitchRightArrow?: Phaser.GameObjects.Text;
+  private startSwitchLeftHitArea?: Phaser.GameObjects.Zone;
+  private startSwitchRightHitArea?: Phaser.GameObjects.Zone;
+  private bossFightUnlocked = false;
   private cursorIcon!: Phaser.GameObjects.Text;
   private descText!: Phaser.GameObjects.Text;
   private backgroundGrid?: Phaser.GameObjects.Graphics;
@@ -332,39 +335,47 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private getStartMenuText(): string {
-    return this.startPlayMode === 'onePlayer' ? 'ゲーム開始\n1人プレイ' : 'ゲーム開始\n2人プレイ';
+    if (this.startPlayMode === 'onePlayer') return 'ゲーム開始\n1人プレイ';
+    if (this.startPlayMode === 'twoPlayer') return 'ゲーム開始\n2人プレイ';
+    return 'ゲーム開始\nボス戦';
   }
 
   private getStartDescription(): string {
-    return this.startPlayMode === 'onePlayer'
-      ? '一人でステージを攻略するメインモードを開始します。'
-      : '2人で協力してステージを攻略できるモードです。';
+    if (this.startPlayMode === 'onePlayer') return '一人でステージを攻略するメインモードを開始します。';
+    if (this.startPlayMode === 'twoPlayer') return '2人で協力してステージを攻略できるモードです。';
+    return '隠しボスとの一騎打ちに挑みます。被ダメージが増加します。';
   }
 
   private getMenuItemY(index: number): number {
     const startY = 289;
     if (index === 0) return startY;
-    return 358 + (index - 1) * 28;
+    return 366 + (index - 1) * 36;
   }
 
   private getMenuButtonBounds(index: number): { x: number; width: number; height: number } {
     if (index === 0) {
-      return { x: 122, width: 302, height: 118 };
+      return { x: 122, width: 302, height: 104 };
     }
-    return { x: 122, width: 302, height: 28 };
+    return { x: 122, width: 302, height: 32 };
   }
 
   private createMenu(): void {
     this.startPlayMode = 'onePlayer';
-    const bossFightUnlocked = SaveManager.getInstance().hasClearedStage3();
+    this.bossFightUnlocked = SaveManager.getInstance().hasClearedStage3();
 
     this.menuItems = [
       {
         text: this.getStartMenuText(),
         description: this.getStartDescription(),
         action: () => {
+          const isBossFight = this.startPlayMode === 'bossFight';
+          if (isBossFight && !this.bossFightUnlocked) return;
           this.titleBgm?.stop();
-          this.scene.start('status', { mode: 'gameStart', twoPlayer: this.startPlayMode === 'twoPlayer' });
+          this.scene.start('status', {
+            mode: 'gameStart',
+            twoPlayer: this.startPlayMode === 'twoPlayer',
+            startAtBonusStage: isBossFight,
+          });
         },
       },
       {
@@ -383,21 +394,6 @@ export class TitleScene extends Phaser.Scene {
         action: () => {
           this.titleBgm?.stop();
           this.scene.start('option');
-        },
-      },
-      {
-        text: bossFightUnlocked ? 'ボス戦' : 'ボス戦 🔒（未解禁）',
-        description: bossFightUnlocked
-          ? '隠しボスとの一騎打ちに挑みます。難易度設定（被ダメージ）が反映されます。'
-          : 'ステージ3を（普通・難、いずれかで）クリアすると挑戦できるようになります。',
-        locked: !bossFightUnlocked,
-        action: () => {
-          this.titleBgm?.stop();
-          this.scene.start('status', {
-            mode: 'gameStart',
-            twoPlayer: this.startPlayMode === 'twoPlayer',
-            startAtBonusStage: true,
-          });
         },
       },
     ];
@@ -444,7 +440,7 @@ export class TitleScene extends Phaser.Scene {
 
       const btn = this.add.text(index === 0 ? bounds.x + bounds.width / 2 : 132, y, item.text, {
         fontFamily: GAME_CONFIG.FONT_FAMILY,
-        fontSize: index === 0 ? '25px' : '20px',
+        fontSize: index === 0 ? '27px' : '20px',
         color: '#e2e8f0',
         stroke: '#0f172a',
         strokeThickness: 4,
@@ -469,7 +465,7 @@ export class TitleScene extends Phaser.Scene {
     this.mainUiContainer.add(this.descText);
 
     // 操作ガイド
-    const guideText = this.add.text(270, GAME_CONFIG.HEIGHT - 22, '↑↓ / WS：選択　　←→ / AD：1P・2P切替　　ENTER / SPACE / クリック：決定', {
+    const guideText = this.add.text(270, GAME_CONFIG.HEIGHT - 22, '↑↓ / WS：選択　　←→ / AD：開始モード切替　　ENTER / SPACE / クリック：決定', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '13px',
       color: '#64748b',
@@ -570,51 +566,104 @@ export class TitleScene extends Phaser.Scene {
   private createStartSwitchArrow(): void {
     const y = this.getMenuItemY(0);
 
-    this.startSwitchArrow = this.add.text(0, y, '▶', {
+    this.startSwitchLeftArrow = this.add.text(0, y, '◀', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '42px',
       color: '#f6d365',
       stroke: '#0f172a',
       strokeThickness: 5,
     }).setOrigin(0.5).setDepth(3);
-    this.mainUiContainer.add(this.startSwitchArrow);
+    this.mainUiContainer.add(this.startSwitchLeftArrow);
 
-    this.startSwitchHitArea = this.add.zone(0, y, 54, this.getMenuButtonBounds(0).height)
+    this.startSwitchRightArrow = this.add.text(0, y, '▶', {
+      fontFamily: GAME_CONFIG.FONT_FAMILY,
+      fontSize: '42px',
+      color: '#f6d365',
+      stroke: '#0f172a',
+      strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(3);
+    this.mainUiContainer.add(this.startSwitchRightArrow);
+
+    this.startSwitchLeftHitArea = this.add.zone(0, y, 54, this.getMenuButtonBounds(0).height)
       .setDepth(3.5)
       .setInteractive({ useHandCursor: true });
-    this.startSwitchHitArea.on('pointerover', () => {
+    this.startSwitchLeftHitArea.on('pointerover', () => {
       if (this.isIntroPlaying || this.modalOpen) return;
       this.selectMenuItem(0);
     });
-    this.startSwitchHitArea.on('pointerdown', () => {
+    this.startSwitchLeftHitArea.on('pointerdown', () => {
       if (this.isIntroPlaying) {
         this.skipIntroAnimation();
         return;
       }
       this.selectMenuItem(0);
-      this.switchStartPlayMode(this.startPlayMode === 'onePlayer' ? 1 : -1);
+      this.switchStartPlayMode(-1);
     });
-    this.mainUiContainer.add(this.startSwitchHitArea);
+    this.mainUiContainer.add(this.startSwitchLeftHitArea);
+
+    this.startSwitchRightHitArea = this.add.zone(0, y, 54, this.getMenuButtonBounds(0).height)
+      .setDepth(3.5)
+      .setInteractive({ useHandCursor: true });
+    this.startSwitchRightHitArea.on('pointerover', () => {
+      if (this.isIntroPlaying || this.modalOpen) return;
+      this.selectMenuItem(0);
+    });
+    this.startSwitchRightHitArea.on('pointerdown', () => {
+      if (this.isIntroPlaying) {
+        this.skipIntroAnimation();
+        return;
+      }
+      this.selectMenuItem(0);
+      this.switchStartPlayMode(1);
+    });
+    this.mainUiContainer.add(this.startSwitchRightHitArea);
 
     this.updateStartSwitchArrow();
   }
 
   private updateStartSwitchArrow(): void {
-    if (!this.startSwitchArrow || !this.startSwitchHitArea) return;
+    if (!this.startSwitchLeftArrow || !this.startSwitchRightArrow || !this.startSwitchLeftHitArea || !this.startSwitchRightHitArea) return;
 
     const y = this.getMenuItemY(0);
     const startBounds = this.getMenuButtonBounds(0);
-    const arrowX = this.startPlayMode === 'onePlayer' ? startBounds.x + startBounds.width + 38 : startBounds.x - 30;
-    const arrowText = this.startPlayMode === 'onePlayer' ? '▶' : '◀';
+    const leftX = startBounds.x - 30;
+    const rightX = startBounds.x + startBounds.width + 38;
+    const canGoLeft = this.startPlayMode !== 'onePlayer';
+    const canGoRight = this.startPlayMode === 'onePlayer' || (this.startPlayMode === 'twoPlayer' && this.bossFightUnlocked);
+    const showLockedBossArrow = this.startPlayMode === 'twoPlayer' && !this.bossFightUnlocked;
 
-    this.startSwitchArrow.setText(arrowText).setPosition(arrowX, y);
-    this.startSwitchHitArea.setPosition(arrowX, y);
+    this.startSwitchLeftArrow
+      .setPosition(leftX, y)
+      .setVisible(canGoLeft)
+      .setColor('#f6d365');
+    this.startSwitchLeftHitArea
+      .setPosition(leftX, y)
+      .setVisible(canGoLeft);
+    if (canGoLeft) this.startSwitchLeftHitArea.setInteractive({ useHandCursor: true });
+    else this.startSwitchLeftHitArea.disableInteractive();
+
+    this.startSwitchRightArrow
+      .setText(showLockedBossArrow ? '🔒' : '▶')
+      .setPosition(rightX, y)
+      .setVisible(canGoRight || showLockedBossArrow)
+      .setColor(showLockedBossArrow ? '#94a3b8' : '#f6d365')
+      .setFontSize(showLockedBossArrow ? 30 : 42);
+    this.startSwitchRightHitArea
+      .setPosition(rightX, y)
+      .setVisible(canGoRight || showLockedBossArrow);
+    if (canGoRight || showLockedBossArrow) this.startSwitchRightHitArea.setInteractive({ useHandCursor: canGoRight });
+    else this.startSwitchRightHitArea.disableInteractive();
   }
 
   private switchStartPlayMode(direction: number): void {
     if (this.isIntroPlaying || this.modalOpen || this.selectedIndex !== 0) return;
 
-    const nextMode: StartPlayMode = this.startPlayMode === 'onePlayer' ? 'twoPlayer' : 'onePlayer';
+    const nextMode = this.getNextStartPlayMode(direction);
+    if (!nextMode) {
+      this.updateStartSwitchArrow();
+      return;
+    }
+
     const slideDirection = direction >= 0 ? 1 : -1;
     const startText = this.menuTexts[0];
     const centerX = this.getMenuButtonBounds(0).x + this.getMenuButtonBounds(0).width / 2;
@@ -647,6 +696,18 @@ export class TitleScene extends Phaser.Scene {
     });
   }
 
+  private getNextStartPlayMode(direction: number): StartPlayMode | undefined {
+    if (direction > 0) {
+      if (this.startPlayMode === 'onePlayer') return 'twoPlayer';
+      if (this.startPlayMode === 'twoPlayer' && this.bossFightUnlocked) return 'bossFight';
+      return undefined;
+    }
+
+    if (this.startPlayMode === 'bossFight') return 'twoPlayer';
+    if (this.startPlayMode === 'twoPlayer') return 'onePlayer';
+    return undefined;
+  }
+
   private playSound(key: string): void {
     this.sound.play(key, { volume: SettingsManager.getInstance().seVolume / 100 });
   }
@@ -666,21 +727,21 @@ export class TitleScene extends Phaser.Scene {
       }
 
       if (this.menuItems[i].locked) {
-        text.setColor('#5b6472').setFontSize(i === 0 ? 26 : 20).setStyle({ fontStyle: 'normal' });
+        text.setColor('#5b6472').setFontSize(i === 0 ? 28 : 20).setStyle({ fontStyle: 'normal' });
         this.menuBackplates[i].clear();
         this.menuBackplates[i].fillStyle(0x061a4a, 0.35);
         this.menuBackplates[i].fillRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
         this.menuBackplates[i].lineStyle(1, 0x334155, 0.4);
         this.menuBackplates[i].strokeRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
       } else if (i === this.selectedIndex) {
-        text.setColor('#f6d365').setFontSize(i === 0 ? 28 : 22).setStyle({ fontStyle: 'bold' });
+        text.setColor('#f6d365').setFontSize(i === 0 ? 30 : 22).setStyle({ fontStyle: 'bold' });
         this.menuBackplates[i].clear();
         this.menuBackplates[i].fillStyle(0x0d4fa6, 0.9);
         this.menuBackplates[i].fillRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
         this.menuBackplates[i].lineStyle(2, 0xfacc15, 0.9);
         this.menuBackplates[i].strokeRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
       } else {
-        text.setColor('#cbd5e1').setFontSize(i === 0 ? 26 : 20).setStyle({ fontStyle: 'normal' });
+        text.setColor('#cbd5e1').setFontSize(i === 0 ? 28 : 20).setStyle({ fontStyle: 'normal' });
         this.menuBackplates[i].clear();
         this.menuBackplates[i].fillStyle(0x061a4a, 0.5);
         this.menuBackplates[i].fillRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);

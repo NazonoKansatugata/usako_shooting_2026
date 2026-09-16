@@ -44,10 +44,10 @@ export class Stage4Boss extends Boss {
     { x: 720, y: 315 },
     { x: 240, y: 315 },
   ];
-  private static readonly SAFE_ZONE_WIDTH = 220;
-  private static readonly SAFE_ZONE_HEIGHT = 150;
-  private static readonly ULTIMATE_INTERVAL = 3200;
-  private static readonly ULTIMATE_WARNING_MS = 1400;
+  private static readonly SAFE_ZONE_WIDTH = 160;
+  private static readonly SAFE_ZONE_HEIGHT = 110;
+  private static readonly ULTIMATE_INTERVAL = 2400;
+  private static readonly ULTIMATE_WARNING_MS = 1200;
   private static readonly ULTIMATE_ACTIVE_MS = 500;
 
   private beamTimer = 0;
@@ -143,12 +143,14 @@ export class Stage4Boss extends Boss {
 
     // 横一直線ビームのy座標は、自機や乱数ではなくボス自身の（決定的に動く）y座標に合わせる
     // ボスのx座標より後ろ（画面右端側）までビームが伸びて見えないよう、ボスの位置までで留める
+    // depthをボス本体（0）より奥にして、ビームでボスの立ち絵が隠れないようにする
     const y = Phaser.Math.Clamp(this.y, Stage4Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage4Boss.BEAM_Y_MARGIN);
     const horizontalHazard = new Hazard(
       this.scene,
       { kind: 'rect', width: this.x, height: Stage4Boss.BEAM_HEIGHT },
       players,
       this.hitPlayer,
+      -0.5,
     );
     horizontalHazard.trigger(this.x / 2, y, Stage4Boss.BEAM_WARNING_MS, Stage4Boss.BEAM_ACTIVE_MS);
     this.beamHazards.push(horizontalHazard);

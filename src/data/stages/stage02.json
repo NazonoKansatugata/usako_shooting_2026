@@ -876,7 +876,7 @@
   ],
   "boss": {
     "hp": 70,
-    "bulletInterval": 750,
+    "bulletInterval": 50,
     "bulletSpeed": 260
   }
 }

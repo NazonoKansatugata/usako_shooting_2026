@@ -19,7 +19,7 @@ import { StageManager } from '../managers/StageManager';
 import { SettingsManager } from '../managers/SettingsManager';
 import { SaveManager } from '../managers/SaveManager';
 import { StatusManager } from '../managers/StatusManager';
-import { preloadPostStageAssets, preloadStage1Assets } from '../managers/AssetPreloader';
+import { preloadPostStageAssets, preloadStage1Assets, enemyExplosionFrameKey, ENEMY_EXPLOSION_FRAME_COUNT } from '../managers/AssetPreloader';
 import { DialogueWindow } from '../ui/DialogueWindow';
 import { StoryManager } from '../managers/StoryManager';
 
@@ -83,6 +83,8 @@ export class ShootingScene extends Phaser.Scene {
   private pendingBonusStageStart = false;
   /** 現在ステージ4ボス戦中かどうか */
   private isBonusBossFight = false;
+  /** 現在表示中のステージクリアパネルが最終ステージ（次ステージなし）のものかどうか。ENTERの挙動をタイトル遷移に切り替えるのに使う */
+  private isFinalStageClear = false;
   /** ボーナスボスのみステージJSON外のHPを使うため、bossMaxHp計算用に個別保持する */
   private bonusBossMaxHp?: number;
   private static readonly BONUS_BOSS_HP = 150;
@@ -159,6 +161,7 @@ export class ShootingScene extends Phaser.Scene {
 
     this.createTextures();
     this.createPlayerAnimation();
+    this.createEnemyExplosionAnimation();
     this.createGroups();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -190,19 +193,23 @@ export class ShootingScene extends Phaser.Scene {
 
     this.input.keyboard!.on('keydown-ENTER', () => {
       if (this.mode === 'stageClear') {
-        this.scene.pause();
-        this.scene.launch('status', {
-          mode: 'stageClear',
-          twoPlayer: this.twoPlayer,
-          score: this.score,
-          stageNumber: this.stageManager.stageNumber,
-        });
+        if (this.isFinalStageClear) {
+          this.scene.start('title');
+        } else {
+          this.scene.pause();
+          this.scene.launch('status', {
+            mode: 'stageClear',
+            twoPlayer: this.twoPlayer,
+            score: this.score,
+            stageNumber: this.stageManager.stageNumber,
+          });
+        }
       } else if (this.mode === 'clear') {
         // 'gameOver'はfinish()内でシーン遷移前に同期的にセットされるため、ここで反応すると
         // 死亡演出～GameOverScene遷移までの間にEnterを押した際、本来のGameOverScene→ステータス画面
         // （難易度反映）を経由せずstartGame()で即座に普通の難易度で再開してしまうバグになる。
         // 'gameOver'はここでは無視し、必ずGameOverScene→ステータス画面経由で再開させる。
-        this.startGame();
+        this.scene.start('title');
       }
     });
 
@@ -333,6 +340,17 @@ export class ShootingScene extends Phaser.Scene {
         repeat: -1,
       });
     }
+  }
+
+  /** 雑魚敵撃破時の爆発演出用アニメーション（DefineSprite_537の1〜15.pngをコマ送り） */
+  private createEnemyExplosionAnimation(): void {
+    if (this.anims.exists('enemy-explosion')) return;
+    this.anims.create({
+      key: 'enemy-explosion',
+      frames: Array.from({ length: ENEMY_EXPLOSION_FRAME_COUNT }, (_, i) => ({ key: enemyExplosionFrameKey(i + 1) })),
+      frameRate: 24,
+      repeat: 0,
+    });
   }
 
   private createGroups(): void {
@@ -684,8 +702,12 @@ export class ShootingScene extends Phaser.Scene {
     return baseHp * (this.twoPlayer ? GAME_CONFIG.BOSS_HP_MULTIPLIER_2P : 1);
   }
 
-  /** ボス撃破後、次ステージへ進む前に見やすいリザルトカードを表示してプレイヤーの入力を待つ。 */
-  private enterStageClear(clearedStage: number): void {
+  /**
+   * ボス撃破後、次ステージへ進む前に見やすいリザルトカードを表示してプレイヤーの入力を待つ。
+   * isFinalClear=trueの場合（最終ステージクリア時）は次ステージへの案内ではなく、
+   * ENTERでタイトルへ戻る旨を案内し、ハイスコア等の最終集計も行う。
+   */
+  private enterStageClear(clearedStage: number, isFinalClear = false): void {
     // ボス撃破演出（爆発→会話→吸い込み）はカメラフェード完了までの非同期処理を挟むため、
     // その間に自機が力尽きてfinish('gameOver')が先に呼ばれているケースがありうる。
     // ここで無条件にmodeを上書きすると、finish()側で予約された
@@ -693,6 +715,7 @@ export class ShootingScene extends Phaser.Scene {
     // 無効化されフリーズしたように見えるため、既にplaying以外へ遷移済みなら何もしない。
     if (this.mode !== 'playing') return;
     this.mode = 'stageClear';
+    this.isFinalStageClear = isFinalClear;
     this.stopBgm();
     if (this.player1?.active) this.player1.setVelocity(0, 0);
     if (this.player2?.active) this.player2.setVelocity(0, 0);
@@ -711,18 +734,23 @@ export class ShootingScene extends Phaser.Scene {
 
     const clearSeconds = (this.stageTime / 1000).toFixed(1);
     const hp1 = Math.max(0, this.player1.hp);
-    this.saveManager.reportStageCleared(clearedStage, this.settingsManager.difficulty);
+    const difficulty = this.settingsManager.difficulty;
+    this.saveManager.reportStageCleared(clearedStage, difficulty);
+    if (isFinalClear) {
+      this.saveManager.reportAllCleared(difficulty);
+      this.saveManager.reportScore(this.score);
+    }
     const hpLine = this.twoPlayer
       ? `P1 ${hp1}/${this.player1.maxHp}\nP2 ${Math.max(0, this.player2?.hp ?? 0)}/${this.player2?.maxHp ?? GAME_CONFIG.PLAYER_HP}`
       : `${hp1} / ${this.player1.maxHp}`;
 
     this.banner.setVisible(false);
     this.instruction.setVisible(false);
-    this.showStageClearPanel(clearedStage, clearSeconds, hpLine);
+    this.showStageClearPanel(clearedStage, clearSeconds, hpLine, isFinalClear);
   }
 
   /** 近未来SF風の洗練されたステージクリアリザルトパネルを生成・表示 */
-  private showStageClearPanel(clearedStage: number, clearSeconds: string, hpLine: string): void {
+  private showStageClearPanel(clearedStage: number, clearSeconds: string, hpLine: string, isFinalClear = false): void {
     this.hideStageClearPanel();
 
     const panel = this.add.container(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.PLAY_AREA.HEIGHT / 2).setDepth(25);
@@ -783,8 +811,10 @@ export class ShootingScene extends Phaser.Scene {
     const timeLabel = this.add.text(cardXs[0] + cardW / 2, cardY + 20, '⏱ CLEAR TIME', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '13px',
-      color: '#a9d6e5',
+      color: '#e2e8f0',
       fontStyle: 'bold',
+      stroke: '#060d1b',
+      strokeThickness: 2,
     }).setOrigin(0.5);
     const timeValue = this.add.text(cardXs[0] + cardW / 2, cardY + 58, `${clearSeconds}s`, {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
@@ -801,8 +831,10 @@ export class ShootingScene extends Phaser.Scene {
     const hpLabel = this.add.text(cardXs[1] + cardW / 2, cardY + 20, '💖 SURVIVAL HP', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '13px',
-      color: '#a9d6e5',
+      color: '#e2e8f0',
       fontStyle: 'bold',
+      stroke: '#060d1b',
+      strokeThickness: 2,
     }).setOrigin(0.5);
     const hpValue = this.add.text(cardXs[1] + cardW / 2, cardY + 58, hpLine, {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
@@ -821,8 +853,10 @@ export class ShootingScene extends Phaser.Scene {
     const scoreLabel = this.add.text(cardXs[2] + cardW / 2, cardY + 20, '🏆 SCORE', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '13px',
-      color: '#a9d6e5',
+      color: '#e2e8f0',
       fontStyle: 'bold',
+      stroke: '#060d1b',
+      strokeThickness: 2,
     }).setOrigin(0.5);
     const scoreValue = this.add.text(cardXs[2] + cardW / 2, cardY + 58, `${this.score.toLocaleString()}`, {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
@@ -836,7 +870,7 @@ export class ShootingScene extends Phaser.Scene {
     panel.add(scoreValue);
 
     // フッター操作案内（パルス点滅）
-    const promptText = this.add.text(0, 70, '▶ [ ENTER ] を押して次のステージへ ◀', {
+    const promptText = this.add.text(0, 70, isFinalClear ? '▶ [ ENTER ] を押してタイトルへ ◀' : '▶ [ ENTER ] を押して次のステージへ ◀', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '17px',
       color: '#ffffff',
@@ -1139,7 +1173,7 @@ export class ShootingScene extends Phaser.Scene {
         break;
       case 2:
         this.boss = new Stage2Boss(
-          this, bx, by, getPlayers, hitPlayer, this.enemyBullets,
+          this, bx, by, this.enemyBullets,
           bossConfig.bulletInterval, bossConfig.bulletSpeed,
         );
         break;
@@ -1270,11 +1304,19 @@ export class ShootingScene extends Phaser.Scene {
     if (!bullet || !enemy || !bullet.active || !enemy.active) return;
     bullet.disableBody(true, true);
     if (enemy.takeDamage()) {
+      this.playEnemyExplosion(enemy.x, enemy.y);
       enemy.disableBody(true, true);
       this.sound.play('se_enemy_defeat', { volume: this.seVolume(0.45) });
       this.score += ShootingScene.SCORE_ENEMY_DEFEAT;
       this.updateHud();
     }
+  }
+
+  /** 雑魚敵撃破時に爆発アニメーション（DefineSprite_537の1〜15コマ）を1回再生し、終わったら破棄する */
+  private playEnemyExplosion(x: number, y: number): void {
+    const explosion = this.add.sprite(x, y, enemyExplosionFrameKey(1)).setDepth(8);
+    explosion.play('enemy-explosion');
+    explosion.once('animationcomplete', () => explosion.destroy());
   }
 
   private hitBoss(object1: any, object2: any): void {
@@ -1424,8 +1466,11 @@ export class ShootingScene extends Phaser.Scene {
       if (progress === 1) {
         if (this.stageManager.advance()) {
           this.enterStageClear(clearedStage);
-        } else {
+        } else if (this.isBonusBossFight) {
           this.finish('clear');
+        } else {
+          // 最終ステージ（次ステージなし）：他ステージと同じリザルトパネルを出し、ENTERでタイトルへ戻す
+          this.enterStageClear(clearedStage, true);
         }
         this.cameras.main.fadeIn(600, 255, 255, 255);
       }
@@ -1489,14 +1534,10 @@ export class ShootingScene extends Phaser.Scene {
     this.enemyBullets.setVelocity(0, 0);
     this.dialogueWindow.hideDialogue();
 
-    const difficulty = this.settingsManager.difficulty;
+    // 通常の最終ステージクリアはenterStageClear()側でリザルトパネル表示とセーブ処理を行うため、
+    // ここに到達する'clear'はボーナスボス戦（単体ボス戦）撃破時のみ。
     if (mode === 'clear') {
-      if (this.isBonusBossFight) {
-        this.saveManager.reportBossFightCleared();
-      } else {
-        this.saveManager.reportStageCleared(this.stageManager.stageNumber, difficulty);
-        this.saveManager.reportAllCleared(difficulty);
-      }
+      this.saveManager.reportBossFightCleared();
     }
     const isNewHighScore = this.saveManager.reportScore(this.score);
 
@@ -1517,17 +1558,16 @@ export class ShootingScene extends Phaser.Scene {
             highScore: this.saveManager.highScore,
             isNewHighScore,
             twoPlayer: this.twoPlayer,
+            startAtBonusStage: this.isBonusBossFight,
           });
         });
       });
       return;
     }
 
-    this.banner.setText(this.isBonusBossFight ? 'BOSS CLEAR!' : 'ALL STAGE CLEAR!').setVisible(true);
+    this.banner.setText('BOSS CLEAR!').setVisible(true);
     const highScoreLine = isNewHighScore ? '\n★ NEW HIGH SCORE ★' : `\nハイスコア：${this.saveManager.highScore}`;
-    this.instruction.setText(
-      `SCORE：${this.score}${highScoreLine}\n\nENTER：もう一度プレイ　　ESC / T：タイトルへ戻る`,
-    ).setVisible(true);
+    this.instruction.setText(`SCORE：${this.score}${highScoreLine}\n\nENTER / ESC / T：タイトルへ戻る`).setVisible(true);
   }
 
   private playStageBgm(): void {
