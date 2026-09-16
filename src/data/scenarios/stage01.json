@@ -72,7 +72,7 @@
     },
     {
       "id": "s1_early_07",
-      "triggerType": "event",
+      "triggerType": "progress",
       "eventId": "s1_early",
       "triggerPercent": 30,
       "speaker": "ねここ",
@@ -81,47 +81,20 @@
     },
     {
       "id": "s1_early_08",
-      "triggerType": "event",
+      "triggerType": "progress",
       "eventId": "s1_early",
       "triggerPercent": 30,
-      "speaker": "うさこ",
-      "text": "そういえば、あのパンダは何しに来てるウサ？",
+      "speaker": "けろこ",
+      "text": "基本的に動き回ってればあたらないケロ",
       "duration": 1500
     },
     {
       "id": "s1_early_09",
-      "triggerType": "event",
-      "eventId": "s1_early",
-      "triggerPercent": 30,
-      "speaker": "ねここ",
-      "text": "いつも急に表れては、何もせずに帰っていくニャね",
-      "duration": 1500
-    },
-    {
-      "id": "s1_early_10",
-      "triggerType": "event",
-      "eventId": "s1_early",
-      "triggerPercent": 30,
-      "speaker": "けろこ",
-      "text": "遊びたかっただけの野良パンダという説もあるケロ",
-      "duration": 1500
-    },
-    {
-      "id": "s1_early_11",
-      "triggerType": "event",
+      "triggerType": "progress",
       "eventId": "s1_early",
       "triggerPercent": 30,
       "speaker": "うさこ",
-      "text": "なるほど！納得ウサ！",
-      "duration": 1500
-    },
-    {
-      "id": "s1_early_12",
-      "triggerType": "event",
-      "eventId": "s1_early",
-      "triggerPercent": 30,
-      "speaker": "ねここ",
-      "text": "空を飛んでることには言及無しニャ!?",
+      "text": "このままどんどん行くウサ！",
       "duration": 1500
     },
     {
@@ -265,35 +238,35 @@
       "id": "s1_bosspre_02",
       "triggerType": "bossDefeat",
       "speaker": "ねここ",
-      "text": "なんか色々散らかってるニャね",
+      "text": "さっきのボスへの言及はないのニャ....?",
       "duration": 1500
     },
     {
       "id": "s1_bosspre_03",
       "triggerType": "bossDefeat",
       "speaker": "うさこ",
-      "text": "見覚えのあるものも混ざってるウサ",
+      "text": "早めに成敗できてよかったウサ",
       "duration": 1500
     },
     {
       "id": "s1_bosspre_04",
       "triggerType": "bossDefeat",
       "speaker": "けろこ",
-      "text": "待つケロ。これは……",
+      "text": "うさこ！ねここ！見るケロ！",
       "duration": 1500
     },
     {
       "id": "s1_bosspre_05",
       "triggerType": "bossDefeat",
       "speaker": "うさこ",
-      "text": "けろこ、何か知ってるウサ？",
+      "text": "何か見つけたウサ？",
       "duration": 1500
     },
     {
       "id": "s1_bosspre_06",
       "triggerType": "bossDefeat",
       "speaker": "けろこ",
-      "text": "……ゼ〇伝時オ〇の新作リメイクケロ...",
+      "text": "ゼ〇伝時オ〇の新作リメイクケロ...！",
       "duration": 1500
     },
     {

@@ -342,16 +342,16 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private getMenuItemY(index: number): number {
-    const startY = 274;
+    const startY = 289;
     if (index === 0) return startY;
-    return startY + 64 + (index - 1) * 42;
+    return 358 + (index - 1) * 28;
   }
 
   private getMenuButtonBounds(index: number): { x: number; width: number; height: number } {
     if (index === 0) {
-      return { x: 122, width: 302, height: 56 };
+      return { x: 122, width: 302, height: 118 };
     }
-    return { x: 122, width: 302, height: 36 };
+    return { x: 122, width: 302, height: 28 };
   }
 
   private createMenu(): void {
@@ -404,7 +404,7 @@ export class TitleScene extends Phaser.Scene {
 
     const startY = this.getMenuItemY(0);
 
-    const selectMenuHeader = this.add.text(132, startY - 58, 'SELECT MENU', {
+    const selectMenuHeader = this.add.text(132, startY - 73, 'SELECT MENU', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
       fontSize: '12px',
       color: '#22d3ee',
@@ -444,7 +444,7 @@ export class TitleScene extends Phaser.Scene {
 
       const btn = this.add.text(index === 0 ? bounds.x + bounds.width / 2 : 132, y, item.text, {
         fontFamily: GAME_CONFIG.FONT_FAMILY,
-        fontSize: index === 0 ? '25px' : '22px',
+        fontSize: index === 0 ? '25px' : '20px',
         color: '#e2e8f0',
         stroke: '#0f172a',
         strokeThickness: 4,
@@ -579,7 +579,7 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
     this.mainUiContainer.add(this.startSwitchArrow);
 
-    this.startSwitchHitArea = this.add.zone(0, y, 54, 64)
+    this.startSwitchHitArea = this.add.zone(0, y, 54, this.getMenuButtonBounds(0).height)
       .setDepth(3.5)
       .setInteractive({ useHandCursor: true });
     this.startSwitchHitArea.on('pointerover', () => {
@@ -666,21 +666,21 @@ export class TitleScene extends Phaser.Scene {
       }
 
       if (this.menuItems[i].locked) {
-        text.setColor('#5b6472').setFontSize(i === 0 ? 25 : 22).setStyle({ fontStyle: 'normal' });
+        text.setColor('#5b6472').setFontSize(i === 0 ? 26 : 20).setStyle({ fontStyle: 'normal' });
         this.menuBackplates[i].clear();
         this.menuBackplates[i].fillStyle(0x061a4a, 0.35);
         this.menuBackplates[i].fillRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
         this.menuBackplates[i].lineStyle(1, 0x334155, 0.4);
         this.menuBackplates[i].strokeRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
       } else if (i === this.selectedIndex) {
-        text.setColor('#f6d365').setFontSize(i === 0 ? 27 : 24).setStyle({ fontStyle: 'bold' });
+        text.setColor('#f6d365').setFontSize(i === 0 ? 28 : 22).setStyle({ fontStyle: 'bold' });
         this.menuBackplates[i].clear();
         this.menuBackplates[i].fillStyle(0x0d4fa6, 0.9);
         this.menuBackplates[i].fillRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
         this.menuBackplates[i].lineStyle(2, 0xfacc15, 0.9);
         this.menuBackplates[i].strokeRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
       } else {
-        text.setColor('#cbd5e1').setFontSize(i === 0 ? 25 : 22).setStyle({ fontStyle: 'normal' });
+        text.setColor('#cbd5e1').setFontSize(i === 0 ? 26 : 20).setStyle({ fontStyle: 'normal' });
         this.menuBackplates[i].clear();
         this.menuBackplates[i].fillStyle(0x061a4a, 0.5);
         this.menuBackplates[i].fillRoundedRect(bounds.x, y - bounds.height / 2, bounds.width, bounds.height, 8);
