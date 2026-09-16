@@ -2,51 +2,41 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../../config';
 import { Boss } from './Boss';
 import { Bullet } from '../Bullet';
-import { Hazard } from './Hazard';
-
-type HitPlayerFn = (object1: any, object2: any) => void;
 
 /**
- * ステージ2ボス：上下バウンドしながら、自機狙いの扇状弾幕を一定間隔で発射する。
- * 戦闘開始直後から常に一定間隔で、赤い警告帯（横一直線）→ビームの攻撃も発動する。
- * さらに、同じく戦闘開始直後から常に一定間隔で「画面左から720pxの範囲を3分割した縦レーンの
- * うち1本が点滅→その全域に極太の縦ビームが発生する」攻撃も他の攻撃と並行して発動する。
- * どのレーンが危険になるかは乱数ではなく、黄金比を使った加法的数列（Weyl sequence）で
- * 決めている。単純な巡回（左→中央→右→…）だと数手で読まれてしまうが、この数列は同じ
- * レーンが短い周期で規則的に繰り返さないため、再現性を保ったまま予測しにくいパターンになる。
+ * ステージ2ボス：登場直後は無敵状態で画面中央へ直進し、到達すると停止して無敵が解除される。
+ * 以降はその場に留まったまま、0度・90度・180度・270度から弾を発射しつつ発射のたびに角度を
+ * 少しずつずらしていく「回転十字弾」と、上下（90度・270度）を除いた6方向へ角度固定で
+ * 一斉発射する「非回転6方向弾」を組み合わせて攻撃する。
  */
 export class Stage2Boss extends Boss {
   static readonly TEXTURE_KEY = 'boss2';
 
-  private static readonly FAN_BULLET_COUNT = 7;
-  private static readonly FAN_SPREAD_DEG = 100;
-  private static readonly BEAM_INTERVAL = 2600;
-  private static readonly BEAM_WARNING_MS = 700;
-  private static readonly BEAM_ACTIVE_MS = 320;
-  private static readonly BEAM_HEIGHT = 70;
-  private static readonly BEAM_Y_MARGIN = 60;
-
   /** 実写画像(QRコード)は正方形なので、見た目の高さをこの値に揃えて表示する */
-  private static readonly DISPLAY_HEIGHT = 130;
+  private static readonly DISPLAY_HEIGHT = 100;
   /** QRコードは正方形なので、当たり判定も他のボスより少し正方形寄りにする */
   private static readonly HITBOX_WIDTH = 90;
   private static readonly HITBOX_HEIGHT = 90;
 
-  /** 縦レーン極太ビーム関連。画面左からCOLUMN_RANGE_WIDTHまでの範囲だけをCOLUMN_COUNT分割する（ボスのいる右側は対象外） */
-  private static readonly COLUMN_COUNT = 3;
-  private static readonly COLUMN_RANGE_WIDTH = 720;
-  private static readonly COLUMN_BEAM_INTERVAL = 3200;
-  private static readonly COLUMN_BEAM_WARNING_MS = 900;
-  private static readonly COLUMN_BEAM_ACTIVE_MS = 350;
+  /** 登場時、無敵のまま画面中央へ直進する速度(px/s) */
+  private static readonly ENTER_SPEED = 220;
+  /** この距離まで中央へ近づいたら到達とみなし、停止・無敵解除する */
+  private static readonly ARRIVE_THRESHOLD_PX = 6;
 
-  private fanTimer = 0;
-  private beamTimer = 0;
-  private beamHazards: Hazard[] = [];
-  private beamInProgress = false;
+  /** 回転十字弾：発射のたびにこの角度(度)だけ回転方向へずらしていく */
+  private static readonly ROTATE_STEP_DEG = 3;
 
-  private columnBeamTimer = 0;
-  private columnCycleCounter = 0;
-  private columnHazards: Hazard[] = [];
+  /** 非回転6方向弾の発射間隔(ms)。回転十字弾の間隔とは独立して固定の頻度にする */
+  private static readonly SIDE_BURST_INTERVAL_MS = 1000;
+  /** 8方向から上（270度）・下（90度）を除いた6方向 */
+  private static readonly SIDE_BURST_ANGLES_DEG = [0, 45, 135, 180, 225, 315];
+
+  private phase: 'entering' | 'active' = 'entering';
+  private isInvulnerable = true;
+
+  private rotateAngleDeg = 0;
+  private rotateTimer = 0;
+  private sideBurstTimer = 0;
 
   /** 画像アセット読み込み失敗時（プリロード漏れ等）のフォールバック用に生成テクスチャも用意しておく */
   static ensureTexture(scene: Phaser.Scene): void {
@@ -60,11 +50,9 @@ export class Stage2Boss extends Boss {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    private readonly getPlayers: () => Phaser.Physics.Arcade.Sprite[],
-    private readonly hitPlayer: HitPlayerFn,
     private readonly enemyBulletsPool: Phaser.Physics.Arcade.Group,
-    private readonly fanInterval: number,
-    private readonly fanSpeed: number,
+    private readonly rotateInterval: number,
+    private readonly bulletSpeed: number,
   ) {
     Stage2Boss.ensureTexture(scene);
     super(scene, x, y, Stage2Boss.TEXTURE_KEY);
@@ -76,114 +64,75 @@ export class Stage2Boss extends Boss {
     (this.body as Phaser.Physics.Arcade.Body).setSize(Stage2Boss.HITBOX_WIDTH, Stage2Boss.HITBOX_HEIGHT);
   }
 
+  /** 無敵中はダメージを一切受けない */
+  public override takeDamage(amount = 1): boolean {
+    if (this.isInvulnerable) return false;
+    return super.takeDamage(amount);
+  }
+
   protected onSpawn(): void {
-    this.fanTimer = 0;
-    this.beamTimer = 0;
-    this.beamHazards = [];
-    this.beamInProgress = false;
-    this.columnBeamTimer = 0;
-    this.columnCycleCounter = 0;
-    this.columnHazards = [];
-    this.setVelocityY(80);
+    this.phase = 'entering';
+    this.isInvulnerable = true;
+    this.setAlpha(0.55);
+    this.rotateAngleDeg = 0;
+    this.rotateTimer = 0;
+    this.sideBurstTimer = 0;
+
+    const targetX = GAME_CONFIG.PLAY_AREA.WIDTH / 2;
+    const targetY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
+    this.setVelocity(Math.cos(angle) * Stage2Boss.ENTER_SPEED, Math.sin(angle) * Stage2Boss.ENTER_SPEED);
   }
 
   protected updateBehavior(_time: number, delta: number): void {
-    this.fanTimer += delta;
-    if (this.fanTimer >= this.fanInterval) {
-      this.fanTimer = 0;
-      this.fireFanBarrage();
-    }
-
-    this.beamTimer += delta;
-    if (this.beamTimer >= Stage2Boss.BEAM_INTERVAL) {
-      this.beamTimer = 0;
-      this.fireBeam();
-    }
-
-    if (this.beamHazards.length > 0) {
-      this.beamHazards = this.beamHazards.filter((h) => !h.isDone);
-      if (this.beamInProgress && this.beamHazards.length === 0) {
-        this.beamInProgress = false;
-        this.resumeVerticalMovement();
+    if (this.phase === 'entering') {
+      const targetX = GAME_CONFIG.PLAY_AREA.WIDTH / 2;
+      const targetY = GAME_CONFIG.PLAY_AREA.HEIGHT / 2;
+      if (Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY) <= Stage2Boss.ARRIVE_THRESHOLD_PX) {
+        this.setPosition(targetX, targetY);
+        this.setVelocity(0, 0);
+        this.setAlpha(1);
+        this.isInvulnerable = false;
+        this.phase = 'active';
       }
+      return;
     }
 
-    // 縦レーン極太ビームはHPに関係なく戦闘開始直後から常に一定間隔で発動する（他の攻撃と並行）
-    this.columnBeamTimer += delta;
-    if (this.columnBeamTimer >= Stage2Boss.COLUMN_BEAM_INTERVAL) {
-      this.columnBeamTimer = 0;
-      this.fireColumnBeam();
+    this.rotateTimer += delta;
+    if (this.rotateTimer >= this.rotateInterval) {
+      this.rotateTimer = 0;
+      this.fireRotatingCross();
     }
-    if (this.columnHazards.length > 0) {
-      this.columnHazards = this.columnHazards.filter((h) => !h.isDone);
-    }
-  }
 
-  private fireFanBarrage(): void {
-    const target = this.nearestPlayer(this.getPlayers());
-    const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-    const count = Stage2Boss.FAN_BULLET_COUNT;
-    const stepDeg = Stage2Boss.FAN_SPREAD_DEG / (count - 1);
-    for (let i = 0; i < count; i++) {
-      const offsetDeg = -Stage2Boss.FAN_SPREAD_DEG / 2 + stepDeg * i;
-      const angle = baseAngle + Phaser.Math.DegToRad(offsetDeg);
-
-      let bullet = this.enemyBulletsPool.getFirstDead(false) as Bullet;
-      if (!bullet) {
-        bullet = new Bullet(this.scene, this.x, this.y, 'enemyBullet');
-        this.enemyBulletsPool.add(bullet);
-      }
-      bullet.fire(this.x, this.y, Math.cos(angle) * this.fanSpeed, Math.sin(angle) * this.fanSpeed);
+    this.sideBurstTimer += delta;
+    if (this.sideBurstTimer >= Stage2Boss.SIDE_BURST_INTERVAL_MS) {
+      this.sideBurstTimer = 0;
+      this.fireSideBurst();
     }
   }
 
-  /** ビーム発射中に動くと警告位置とビームの座標がずれるため、警告〜発生の間は移動を止める */
-  private fireBeam(): void {
-    this.pauseVerticalMovement();
-    this.beamInProgress = true;
-
-    const players = this.getPlayers();
-    // 横一直線ビームのy座標は、自機ではなくボス自身のy座標に合わせる
-    const y = Phaser.Math.Clamp(this.y, Stage2Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage2Boss.BEAM_Y_MARGIN);
-    // ボスのx座標より後ろ（画面右端側）までビームが伸びて見えないよう、ボスの位置までで留める
-    const hazard = new Hazard(
-      this.scene,
-      { kind: 'rect', width: this.x, height: Stage2Boss.BEAM_HEIGHT },
-      players,
-      this.hitPlayer,
-    );
-    hazard.trigger(this.x / 2, y, Stage2Boss.BEAM_WARNING_MS, Stage2Boss.BEAM_ACTIVE_MS);
-    this.beamHazards.push(hazard);
+  /** 0/90/180/270度の十字方向に弾を発射し、発射のたびに角度を少しずつ回転させていく */
+  private fireRotatingCross(): void {
+    for (let i = 0; i < 4; i++) {
+      const angleDeg = this.rotateAngleDeg + i * 90;
+      this.fireBulletAt(Phaser.Math.DegToRad(angleDeg));
+    }
+    this.rotateAngleDeg = (this.rotateAngleDeg + Stage2Boss.ROTATE_STEP_DEG) % 360;
   }
 
-  /**
-   * 画面を3分割した縦レーンのうち1本を点滅させて警告し、その全域に極太の縦ビームを発生させる。
-   * どのレーンにするかはWeyl sequenceで固定的に決める（乱数不使用・単純巡回でもない）。
-   * ボス本体の移動には影響を与えず、他の攻撃と完全に並行して進行する。
-   */
-  private fireColumnBeam(): void {
-    this.columnCycleCounter += 1;
-    const columnIndex = Boss.nextWeylIndex(this.columnCycleCounter, Stage2Boss.COLUMN_COUNT);
-    const columnWidth = Stage2Boss.COLUMN_RANGE_WIDTH / Stage2Boss.COLUMN_COUNT;
-    const centerX = columnWidth * (columnIndex + 0.5);
-
-    const hazard = new Hazard(
-      this.scene,
-      { kind: 'rect', width: columnWidth, height: GAME_CONFIG.PLAY_AREA.HEIGHT },
-      this.getPlayers(),
-      this.hitPlayer,
-    );
-    hazard.trigger(
-      centerX, GAME_CONFIG.PLAY_AREA.HEIGHT / 2,
-      Stage2Boss.COLUMN_BEAM_WARNING_MS, Stage2Boss.COLUMN_BEAM_ACTIVE_MS, true,
-    );
-    this.columnHazards.push(hazard);
+  /** 上下を除いた6方向へ、角度を固定したまま一斉発射する */
+  private fireSideBurst(): void {
+    for (const angleDeg of Stage2Boss.SIDE_BURST_ANGLES_DEG) {
+      this.fireBulletAt(Phaser.Math.DegToRad(angleDeg));
+    }
   }
 
-  protected override onDestroyHazards(): void {
-    this.beamHazards.forEach((h) => h.forceEnd());
-    this.beamHazards = [];
-    this.columnHazards.forEach((h) => h.forceEnd());
-    this.columnHazards = [];
+  private fireBulletAt(angle: number): void {
+    let bullet = this.enemyBulletsPool.getFirstDead(false) as Bullet;
+    if (!bullet) {
+      bullet = new Bullet(this.scene, this.x, this.y, 'enemyBullet');
+      this.enemyBulletsPool.add(bullet);
+    }
+    bullet.fire(this.x, this.y, Math.cos(angle) * this.bulletSpeed, Math.sin(angle) * this.bulletSpeed);
   }
 }
