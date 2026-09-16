@@ -136,25 +136,7 @@
       "eventId": "s3_mid",
       "triggerPercent": 50,
       "speaker": "けろこ",
-      "text": "そいつステージ1でもう倒してるケロ...",
-      "duration": 1500
-    },
-    {
-      "id": "s3_mid_06",
-      "triggerType": "progress",
-      "eventId": "s3_mid",
-      "triggerPercent": 50,
-      "speaker": "うさこ",
-      "text": "じゃあ現部長でも倒すウサね",
-      "duration": 1500
-    },
-    {
-      "id": "s3_mid_07",
-      "triggerType": "progress",
-      "eventId": "s3_mid",
-      "triggerPercent": 50,
-      "speaker": "けろこ",
-      "text": "すっごい流れ弾ケロ...",
+      "text": "(これどんな気持ちで脚本書いてるケロ...?).",
       "duration": 1500
     },
     {
@@ -217,11 +199,32 @@
       "text": "リメイクを名乗るくらいなら、新規の素材ぐらい揃えてから挑むウサ！",
       "duration": 1500
     },
-    {
+     {
       "id": "s3_bosspre_05",
       "triggerType": "bossDefeat",
-      "speaker": "部長",
-      "text": "えっ俺無関係...",
+      "speaker": "くろこ",
+      "text": "無念...",
+      "duration": 1500
+    },
+    {
+      "id": "s3_bosspre_06",
+      "triggerType": "bossDefeat",
+      "speaker": "ねここ",
+      "text": "ともあれこれで帰れるニャ！",
+      "duration": 1500
+    },
+    {
+      "id": "s3_bosspre_07",
+      "triggerType": "bossDefeat",
+      "speaker": "うさこ",
+      "text": "最後まで遊んでくれてありがとうウサ！",
+      "duration": 1500
+    },
+    {
+      "id": "s3_bosspre_08",
+      "triggerType": "bossDefeat",
+      "speaker": "うさこ",
+      "text": "おまけではある人物と戦うウサ！",
       "duration": 1500
     }
   ]
