@@ -133,11 +133,13 @@ export class Stage1Boss extends Boss {
 
     const y = Phaser.Math.Clamp(this.y, Stage1Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage1Boss.BEAM_Y_MARGIN);
     // ボスのx座標より後ろ（画面右端側）までビームが伸びて見えないよう、ボスの位置までで留める
+    // depthをボス本体（0）より奥にして、ビームでボスの立ち絵が隠れないようにする
     const hazard = new Hazard(
       this.scene,
       { kind: 'rect', width: this.x, height: Stage1Boss.BEAM_HEIGHT },
       this.getPlayers(),
       this.hitPlayer,
+      -0.5,
     );
     hazard.trigger(this.x / 2, y, Stage1Boss.BEAM_WARNING_MS, Stage1Boss.BEAM_ACTIVE_MS);
     this.beamHazards.push(hazard);
