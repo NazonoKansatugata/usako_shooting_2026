@@ -22,12 +22,19 @@ export class Stage2Boss extends Boss {
   private static readonly BEAM_HP_THRESHOLD = 0.5;
   private static readonly BEAM_Y_MARGIN = 60;
 
+  /** 実写画像(QRコード)は正方形なので、見た目の高さをこの値に揃えて表示する */
+  private static readonly DISPLAY_HEIGHT = 130;
+  /** QRコードは正方形なので、当たり判定も他のボスより少し正方形寄りにする */
+  private static readonly HITBOX_WIDTH = 90;
+  private static readonly HITBOX_HEIGHT = 90;
+
   private fanTimer = 0;
   private beamTimer = 0;
   private beamUnlocked = false;
   private beamHazards: Hazard[] = [];
   private beamInProgress = false;
 
+  /** 画像アセット読み込み失敗時（プリロード漏れ等）のフォールバック用に生成テクスチャも用意しておく */
   static ensureTexture(scene: Phaser.Scene): void {
     if (scene.textures.exists(Stage2Boss.TEXTURE_KEY)) return;
     const g = scene.make.graphics({ x: 0, y: 0 });
@@ -47,6 +54,12 @@ export class Stage2Boss extends Boss {
   ) {
     Stage2Boss.ensureTexture(scene);
     super(scene, x, y, Stage2Boss.TEXTURE_KEY);
+
+    // 実写画像は元解像度のままだと大きすぎるため見た目だけ縮小する。setScale()は当たり判定の
+    // setSize()より先に呼ぶ必要がある（setSize()は呼び出し時点のスケールを当たり判定へ焼き込むため）。
+    const scale = Stage2Boss.DISPLAY_HEIGHT / this.height;
+    this.setScale(scale);
+    (this.body as Phaser.Physics.Arcade.Body).setSize(Stage2Boss.HITBOX_WIDTH, Stage2Boss.HITBOX_HEIGHT);
   }
 
   protected onSpawn(): void {
@@ -111,13 +124,14 @@ export class Stage2Boss extends Boss {
     const players = this.getPlayers();
     // 横一直線ビームのy座標は、自機ではなくボス自身のy座標に合わせる
     const y = Phaser.Math.Clamp(this.y, Stage2Boss.BEAM_Y_MARGIN, GAME_CONFIG.PLAY_AREA.HEIGHT - Stage2Boss.BEAM_Y_MARGIN);
+    // ボスのx座標より後ろ（画面右端側）までビームが伸びて見えないよう、ボスの位置までで留める
     const hazard = new Hazard(
       this.scene,
-      { kind: 'rect', width: GAME_CONFIG.PLAY_AREA.WIDTH, height: Stage2Boss.BEAM_HEIGHT },
+      { kind: 'rect', width: this.x, height: Stage2Boss.BEAM_HEIGHT },
       players,
       this.hitPlayer,
     );
-    hazard.trigger(GAME_CONFIG.PLAY_AREA.WIDTH / 2, y, Stage2Boss.BEAM_WARNING_MS, Stage2Boss.BEAM_ACTIVE_MS);
+    hazard.trigger(this.x / 2, y, Stage2Boss.BEAM_WARNING_MS, Stage2Boss.BEAM_ACTIVE_MS);
     this.beamHazards.push(hazard);
   }
 

@@ -264,21 +264,46 @@ export class StatusScene extends Phaser.Scene {
 
   private createMascot(): void {
     if (this.textures.exists('dialogue-keroko')) {
-      this.add.image(80, 280, 'dialogue-keroko').setDisplaySize(110, 110).setDepth(1);
+      this.add.image(76, 302, 'dialogue-keroko').setDisplaySize(126, 126).setDepth(1);
     }
 
     const bubble = this.add.graphics().setDepth(1);
-    bubble.fillStyle(0xf8f7f2, 0.92);
-    bubble.fillRoundedRect(150, 240, 130, 90, 10);
-    bubble.lineStyle(2, 0x12263a, 1);
-    bubble.strokeRoundedRect(150, 240, 130, 90, 10);
+    this.drawSpeechBubble(bubble, 160, 226, 136, 112, 10);
 
-    this.add.text(162, 252, 'ここは\nガレージケロ！\n好きなように\nパワーアップ\nさせるケロ！！', {
+    this.add.text(178, 237, 'ここは\nガレージケロ！\n好きなように\nパワーアップ\nさせるケロ！！', {
       fontFamily: GAME_CONFIG.FONT_FAMILY,
-      fontSize: '11px',
+      fontSize: '12px',
       color: '#12263a',
-      lineSpacing: 3,
+      lineSpacing: 4,
     }).setDepth(2);
+  }
+
+  private drawSpeechBubble(
+    graphics: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    radius: number
+  ): void {
+    const tailTopY = y + height * 0.48;
+    const tailBottomY = y + height * 0.7;
+    const tailTipX = x - 28;
+    const tailTipY = y + height * 0.62;
+
+    graphics.fillStyle(0xf8f7f2, 0.92);
+    graphics.fillRoundedRect(x, y, width, height, radius);
+    graphics.fillTriangle(x, tailTopY, tailTipX, tailTipY, x, tailBottomY);
+
+    graphics.lineStyle(2, 0x12263a, 1);
+    graphics.strokeRoundedRect(x, y, width, height, radius);
+
+    graphics.fillStyle(0xf8f7f2, 1);
+    graphics.fillTriangle(x + 1, tailTopY + 2, tailTipX, tailTipY, x + 1, tailBottomY - 2);
+
+    graphics.lineStyle(2, 0x12263a, 1);
+    graphics.lineBetween(x, tailTopY, tailTipX, tailTipY);
+    graphics.lineBetween(tailTipX, tailTipY, x, tailBottomY);
   }
 
   // ---------------------------------------------------------------------

@@ -278,6 +278,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return false;
   }
 
+  /**
+   * 無敵時間・DEF・難易度など通常の被弾処理を一切無視して即座に撃墜する。
+   * 「安置以外は問答無用で即ゲームオーバー」のような特殊演出専用。
+   */
+  public forceKill(): void {
+    if (!this.active) return;
+    this._hp = 0;
+  }
+
   private showHitImage(): void {
     this.setVisible(false);
     this.wingSprite.setVisible(false);
