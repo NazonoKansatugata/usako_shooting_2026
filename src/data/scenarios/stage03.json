@@ -135,17 +135,26 @@
       "triggerType": "progress",
       "eventId": "s3_mid",
       "triggerPercent": 50,
-      "speaker": "うさこ",
-      "text": "そうと決まれば急ぐウサー！",
+      "speaker": "けろこ",
+      "text": "そいつステージ1でもう倒してるケロ...",
       "duration": 1500
     },
-     {
+    {
       "id": "s3_mid_06",
       "triggerType": "progress",
       "eventId": "s3_mid",
       "triggerPercent": 50,
+      "speaker": "うさこ",
+      "text": "じゃあ現部長でも倒すウサね",
+      "duration": 1500
+    },
+    {
+      "id": "s3_mid_07",
+      "triggerType": "progress",
+      "eventId": "s3_mid",
+      "triggerPercent": 50,
       "speaker": "けろこ",
-      "text": "(これどんな気持ちで脚本書いてるケロ...?)",
+      "text": "すっごい流れ弾ケロ...",
       "duration": 1500
     },
     {
@@ -211,8 +220,8 @@
     {
       "id": "s3_bosspre_05",
       "triggerType": "bossDefeat",
-      "speaker": "くろこ",
-      "text": "ぐ...3日間のハッカソンで終わる分量じゃなかった...",
+      "speaker": "部長",
+      "text": "えっ俺無関係...",
       "duration": 1500
     }
   ]
