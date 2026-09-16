@@ -16,7 +16,7 @@ const STAGE1_IMAGES: readonly ImageAsset[] = [
   ['dialogue-usako', 'assets/picture/player/DefineSprite_44/1.png'],
   ['dialogue-nekoko', 'assets/picture/player/DefineSprite_54/1.png'],
   ['dialogue-keroko', 'assets/picture/player/DefineSprite_190/4.png'],
-  ['boss1', 'assets/picture/boss/boss1.png'],
+  ['boss1', 'assets/sprites/DefineSprite_953/2.png'],
   ['boss2', 'assets/picture/boss/boss2.png'],
   ['boss4', 'assets/picture/boss/boss4.png'],
 ];

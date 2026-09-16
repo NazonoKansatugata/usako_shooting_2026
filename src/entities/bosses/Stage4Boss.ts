@@ -44,10 +44,10 @@ export class Stage4Boss extends Boss {
     { x: 720, y: 315 },
     { x: 240, y: 315 },
   ];
-  private static readonly SAFE_ZONE_WIDTH = 220;
-  private static readonly SAFE_ZONE_HEIGHT = 150;
-  private static readonly ULTIMATE_INTERVAL = 3200;
-  private static readonly ULTIMATE_WARNING_MS = 1400;
+  private static readonly SAFE_ZONE_WIDTH = 160;
+  private static readonly SAFE_ZONE_HEIGHT = 110;
+  private static readonly ULTIMATE_INTERVAL = 2400;
+  private static readonly ULTIMATE_WARNING_MS = 1200;
   private static readonly ULTIMATE_ACTIVE_MS = 500;
 
   private beamTimer = 0;
